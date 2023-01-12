@@ -67,7 +67,7 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#define MAX_ALLOWED_LOAD 10000
+#define MAX_ALLOWED_LOAD 2000
 #define GRAPHS_N 3
 #define MILLIVOLTAGE_LOWEST_BOUND 1250
 #define MILLIVOLTAGE_HIGHEST_BOUND 8000
@@ -165,7 +165,8 @@ void electrical_load(){
 
     int diff = get_encoder_rotation();
 
-    diff <<= 8;
+//    diff <<= 8;
+    diff = diff * 25;
 
     if (!active_load){
         amperage_load = 0;
@@ -209,7 +210,8 @@ void read_circut_parameters(){
     ina_vol_float = getBusVoltage_V();
     ina_pwr = getPower_mW();
 
-    ina_curr /= 2; // FIXME: bug, but working
+    ina_curr /= 2; // FIXME: calibrate ina219 correctly
+    ina_pwr /= 2;
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -365,7 +367,7 @@ void setup(){
     HAL_Delay(500);
     draw_clear();
     adrs_219 = 0x40;
-    setCalibration_32V_2A();
+    setCalibration_32V_2A_custom();
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 	TIM2->CCR1 = 0;
 }
