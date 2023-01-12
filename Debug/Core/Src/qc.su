@@ -1,0 +1,17 @@
+../Core/Src/qc.c:12:6:GetStateQC	4	static
+../Core/Src/qc.c:16:6:DisableQC	8	static
+../Core/Src/qc.c:21:6:DP_0V	8	static
+../Core/Src/qc.c:27:6:DP_06V	8	static
+../Core/Src/qc.c:33:6:DP_33V	8	static
+../Core/Src/qc.c:39:6:DM_0V	8	static
+../Core/Src/qc.c:45:6:DM_06V	8	static
+../Core/Src/qc.c:51:6:DM_33V	8	static
+../Core/Src/qc.c:57:6:Init_5V	8	static
+../Core/Src/qc.c:65:6:Init_9V	8	static
+../Core/Src/qc.c:73:6:Set_5V	8	static
+../Core/Src/qc.c:79:6:Set_9V	8	static
+../Core/Src/qc.c:85:6:Set_12V	8	static
+../Core/Src/qc.c:91:6:Set_20V	8	static
+../Core/Src/qc.c:98:6:ContinuousMode	8	static
+../Core/Src/qc.c:106:6:IncVoltage	8	static
+../Core/Src/qc.c:122:6:DecVoltage	8	static

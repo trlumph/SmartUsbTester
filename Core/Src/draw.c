@@ -87,22 +87,22 @@ void draw_main_menu_selection(uint16_t move, uint16_t previous_move){
 	SSD1306_DrawRectangle(6,MENU_OFFSET+(move)*STEP, 124, 9 ,1);
 }
 
-void draw_power_menu(float volts, uint32_t amperage, uint32_t power){
+void draw_power_menu(uint32_t voltage, uint32_t amperage, uint32_t power){
     SSD1306_GotoXY (6,0);
     SSD1306_Puts("Power", &Font_7x10, 1);
 
     char str[14];
-    sprintf(str, "%f V ", volts);
+    sprintf(str, "%lu mV     ", voltage);
     SSD1306_GotoXY(6, MENU_OFFSET-3+2*STEP);
     SSD1306_Puts(str, &Font_7x10, 1);
 
     char str2[14];
-    sprintf(str2, "%lu mA     ", (unsigned long)amperage);
+    sprintf(str2, "%lu mA     ", amperage);
     SSD1306_GotoXY(6, MENU_OFFSET-3+3*STEP);
     SSD1306_Puts(str2, &Font_7x10, 1);
 
     char str3[14];
-    sprintf(str3, "%lu mW     ",(unsigned long)power);
+    sprintf(str3, "%lu mW     ", power);
     SSD1306_GotoXY(6, MENU_OFFSET-3+4*STEP);
     SSD1306_Puts(str3, &Font_7x10, 1);
 }

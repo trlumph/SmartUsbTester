@@ -19,38 +19,38 @@ void DisableQC(){
 }
 
 void DP_0V(){
-	HAL_GPIO_WritePin(GPIOE, DP_H_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOE, DP_L_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DP_H_GPIO_Port, DP_H_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DP_L_GPIO_Port, DP_L_Pin, GPIO_PIN_RESET);
 	__qc_state = QC_MANUAL_UNDEFINED;
 }
 
 void DP_06V(){
-	HAL_GPIO_WritePin(GPIOE, DP_H_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOE, DP_L_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DP_H_GPIO_Port, DP_H_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(DP_L_GPIO_Port, DP_L_Pin, GPIO_PIN_RESET);
 	__qc_state = QC_MANUAL_UNDEFINED;
 }
 
 void DP_33V(){
-	HAL_GPIO_WritePin(GPIOE, DP_H_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOE, DP_L_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(DP_H_GPIO_Port, DP_H_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(DP_L_GPIO_Port, DP_L_Pin, GPIO_PIN_SET);
 	__qc_state = QC_MANUAL_UNDEFINED;
 }
 
 void DM_0V(){
-	HAL_GPIO_WritePin(GPIOE, DM_H_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOE, DM_L_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DM_H_GPIO_Port, DM_H_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DM_L_GPIO_Port, DM_L_Pin, GPIO_PIN_RESET);
 	__qc_state = QC_MANUAL_UNDEFINED;
 }
 
 void DM_06V(){
-	HAL_GPIO_WritePin(GPIOE, DM_H_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOE, DM_L_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DM_H_GPIO_Port, DM_H_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(DM_L_GPIO_Port, DM_L_Pin, GPIO_PIN_RESET);
 	__qc_state = QC_MANUAL_UNDEFINED;
 }
 
 void DM_33V(){
-	HAL_GPIO_WritePin(GPIOE, DM_H_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOE, DM_L_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(DM_H_GPIO_Port, DM_H_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(DM_L_GPIO_Port, DM_L_Pin, GPIO_PIN_SET);
 	__qc_state = QC_MANUAL_UNDEFINED;
 }
 
@@ -97,7 +97,9 @@ void Set_20V(){
 // This tells the device that it is entering continuous mode.
 void ContinuousMode(){
 	DM_33V();
+	HAL_Delay(3);
 	DP_06V();
+	HAL_Delay(60);
 	__qc_state = QC_CONTINUOUS;
 }
 

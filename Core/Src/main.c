@@ -69,6 +69,8 @@ static void MX_TIM2_Init(void);
 /* USER CODE BEGIN 0 */
 #define MAX_ALLOWED_LOAD 10000
 #define GRAPHS_N 3
+#define MILLIVOLTAGE_LOWEST_BOUND 1250
+#define MILLIVOLTAGE_HIGHEST_BOUND 8000
 
 typedef enum state_t {
     MAIN_MENU,
@@ -101,6 +103,7 @@ volatile uint16_t move_prev = 0;
 volatile state_t state = MAIN_MENU;
 volatile graph_toggle_t graph_toggle_state = GRAPH_TOGGLE_NONE;
 volatile int is_drawn = 0;
+volatile int device_available = 1;
 
 
 uint32_t ina_curr = 0;
@@ -181,9 +184,9 @@ void electrical_load(){
 
     amperage_load += diff;
     qc_t qc_state = GetStateQC();
-    // if (qc_state != QC_OFF && qc_state != QC_5V && qc_state != QC_9V){
-    //     amperage_load = 0;
-    // }
+    if (qc_state != QC_OFF && qc_state != QC_5V && qc_state != QC_9V){
+        amperage_load = 0;
+    }
 
     // 5v
     // 500 - 113 mA
@@ -258,16 +261,21 @@ void on_button_clicked(){
                     break;
 
                 case CONTINUOUS_MODE:
-                    ContinuousMode();
-                    for(int i = 0; i < 25; ++i){
+                    //ContinuousMode();
+                	DM_33V();
+                		HAL_Delay(3);
+                		DP_06V();
+                		HAL_Delay(60);
+                    for(int i = 0; i < 10; ++i){
+                    	draw_clear();
                         IncVoltage();
-                        HAL_Delay(300);
+                        HAL_Delay(50);
                     }
-					HAL_Delay(2500);
-					for(int i = 0; i < 25; ++i){
-                        DecVoltage();
-                        HAL_Delay(300);
-                    }
+					//HAL_Delay(2500);
+//					for(int i = 0; i < 25; ++i){
+//                        DecVoltage();
+//                        HAL_Delay(350);
+//                    }
                     break;
 
             }
@@ -352,7 +360,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 void setup(){
     HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
     draw_init();
-	  Init_5V();
+	Init_5V();
   	HAL_Delay(3);
     HAL_Delay(500);
     draw_clear();
@@ -362,9 +370,27 @@ void setup(){
 	TIM2->CCR1 = 0;
 }
 
+void board_protection(){
+    read_circut_parameters();
+    if(ina_vol < MILLIVOLTAGE_LOWEST_BOUND){
+        device_available = 0;
+    }
+    else if(ina_vol > MILLIVOLTAGE_HIGHEST_BOUND){
+        Set_5V();
+        TIM2->CCR1 = 0;       
+    }
+    else {
+        if(!device_available){
+            Init_5V();
+        }
+        device_available = 1;
+    }
+}
+
 void loop(){
     move_prev = move;
 
+    //board_protection();
 
     switch(state){
 
@@ -405,7 +431,7 @@ void loop(){
                 HAL_Delay(500);
             }
             read_circut_parameters();
-            draw_power_menu(ina_vol_float, ina_curr, ina_pwr);
+            draw_power_menu(ina_vol, ina_curr, ina_pwr);
 			if(move == EXIT_TO_MAIN_MENU){
 				draw_exit_focus();
 			}
