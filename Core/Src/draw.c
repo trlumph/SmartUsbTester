@@ -21,6 +21,8 @@
 
 uint8_t heights[XN];
 
+
+
 void draw_init(){
 	SSD1306_Init();
 }
@@ -46,7 +48,19 @@ void draw_exit_focus(){
 	SSD1306_DrawFilledRectangle(100 ,0, 10, 10 ,1);
 }
 
-void draw_main_menu() {
+void draw_main_menu(page_t page) {
+	SSD1306_Fill(0);
+	switch (page) {
+		case PAGE_1:
+			draw_main_menu_page_1();
+			break;
+		case PAGE_2:
+			draw_main_menu_page_2();
+		default:
+			break;
+	}
+}
+void draw_main_menu_page_1() {
 	  SSD1306_GotoXY (6,0);
 	  SSD1306_Puts ("MENU", &Font_7x10, 1);
 	  SSD1306_GotoXY (6, MENU_OFFSET+1);
@@ -57,6 +71,16 @@ void draw_main_menu() {
 	  SSD1306_Puts ("CURRENT CONTROL", &Font_7x10, 1);
 	  SSD1306_GotoXY (6, MENU_OFFSET+1+3*STEP);
 	  SSD1306_Puts ("GRAPHS", &Font_7x10, 1);
+}
+void draw_main_menu_page_2() {
+	  SSD1306_GotoXY (6,0);
+	  SSD1306_Puts ("MENU", &Font_7x10, 1);
+	  SSD1306_GotoXY (6, MENU_OFFSET+1);
+	  SSD1306_Puts ("CAPACITY", &Font_7x10, 1);
+	  SSD1306_GotoXY (6, MENU_OFFSET+1+1*STEP);
+	  SSD1306_Puts ("RESISTANCE", &Font_7x10, 1);
+	  SSD1306_GotoXY (6, MENU_OFFSET+1+2*STEP);
+	  SSD1306_Puts ("MAX PARAMS", &Font_7x10, 1);
 }
 
 void draw_qc_menu(){
@@ -82,9 +106,28 @@ void draw_qc_menu_focus(uint16_t pos){
 	SSD1306_DrawRectangle(6,MENU_OFFSET-4+(pos-1)*STEP, 124, 9 ,1);
 }
 
-void draw_main_menu_selection(uint16_t move, uint16_t previous_move){
+void draw_main_menu_selection(uint16_t move, uint16_t previous_move, page_t page){
+	switch (page) {
+		case PAGE_1:
+			draw_main_menu_selection_page_1(move, previous_move);
+			break;
+		case PAGE_2:
+			draw_main_menu_selection_page_2(move, previous_move);
+			break;
+		default:
+			break;
+	}
+
+}
+void draw_main_menu_selection_page_1(uint16_t move, uint16_t previous_move) {
 	SSD1306_DrawRectangle(6,MENU_OFFSET+(previous_move)*STEP, 124, 9 ,0);
 	SSD1306_DrawRectangle(6,MENU_OFFSET+(move)*STEP, 124, 9 ,1);
+
+}
+void draw_main_menu_selection_page_2(uint16_t move, uint16_t previous_move) {
+	SSD1306_DrawRectangle(6,MENU_OFFSET+(previous_move-4)*STEP, 124, 9 ,0);
+	SSD1306_DrawRectangle(6,MENU_OFFSET+(move-4)*STEP, 124, 9 ,1);
+
 }
 
 void draw_power_menu(uint32_t voltage, uint32_t amperage, uint32_t power){
