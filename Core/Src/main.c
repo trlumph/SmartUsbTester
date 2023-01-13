@@ -78,10 +78,15 @@ typedef enum state_t {
     POWER,
     CURRENT_CONTROL,
     GRAPHS,
+	TEST_MAX_PARAMS,
+	TEST_RESISTANCE,
+	TEST_CAPACITY
+
+
 } state_t;
 
 typedef enum qc_menu_t{
-    EXIT_TO_MAIN_MENU,
+    EXIT_TO_MAIN_MENU_FROM_QC,
     SET_5V,
     SET_9V,
     SET_12V,
@@ -89,19 +94,37 @@ typedef enum qc_menu_t{
     CONTINUOUS_MODE
 } qc_menu_t;
 typedef enum graph_toggle_t{
-    GRAPH_TOGGLE_NONE,
+	EXIT_TO_MAIN_MENU_FROM_GRAPH,
     GRAPH_TOGGLE_UPPER_BOUND,
     GRAPH_TOGGLE_LOWER_BOUND,
     GRAPH_TOGGLE_RESET,
     GRAPH_TOGGLE_DATA
 } graph_toggle_t;
+typedef enum power_t{
+	EXIT_TO_MAIN_MENU_FROM_POWER
+} power_t;
+typedef enum current_control_t{
+	EXIT_TO_MAIN_MENU_FROM_CURRENT_CONTROL
+} current_control_t;
+typedef enum max_params_t{
+	EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS
+} max_params_t;
+typedef enum resistance_control_t{
+	EXIT_TO_MAIN_MENU_FROM_RESISTANCE
+} resistance_control_t;
+typedef enum capacity_control_t{
+	EXIT_TO_MAIN_MENU_FROM_CAPACITY
+} capacity_control_t;
+
+
+
 
 volatile int btn_state = 1;
 volatile int can_be_pressed = 1;
 volatile uint16_t move = 0;
 volatile uint16_t move_prev = 0;
 volatile state_t state = MAIN_MENU;
-volatile graph_toggle_t graph_toggle_state = GRAPH_TOGGLE_NONE;
+volatile graph_toggle_t graph_toggle_state = EXIT_TO_MAIN_MENU_FROM_GRAPH;
 volatile int is_drawn = 0;
 volatile int device_available = 1;
 
@@ -119,6 +142,7 @@ int active_load=0;
 
 int graph_upper_bound=7500;
 int graph_lower_bound=0;
+page_t page = PAGE_1;
 
 static const graph_t milliVoltage={
         &ina_vol,
@@ -160,9 +184,7 @@ int get_encoder_rotation(){
     tim3_prev_cnt = tim3_cnt;
     return diff;
 }
-int current_control_move_handler() {
 
-}
 void electrical_load(){
 
     int diff = get_encoder_rotation();
@@ -242,7 +264,7 @@ void on_button_clicked(){
         case QC:
 			
             switch (move){
-                case EXIT_TO_MAIN_MENU:
+                case EXIT_TO_MAIN_MENU_FROM_QC:
                     state=MAIN_MENU;
                     draw_clear();
                     move=0;
@@ -287,7 +309,7 @@ void on_button_clicked(){
 
         case POWER:
             switch (move){
-                case EXIT_TO_MAIN_MENU:
+                case EXIT_TO_MAIN_MENU_FROM_POWER:
                     state=MAIN_MENU;
                     draw_fill (0);
                     move=0;
@@ -297,7 +319,7 @@ void on_button_clicked(){
 
         case CURRENT_CONTROL:
             switch (move){
-                case EXIT_TO_MAIN_MENU:
+                case EXIT_TO_MAIN_MENU_FROM_CURRENT_CONTROL:
                     state=MAIN_MENU;
                     draw_fill (0);
                     move=0;
@@ -307,8 +329,8 @@ void on_button_clicked(){
             break;
 
         case GRAPHS:
-            if(graph_toggle_state == GRAPH_TOGGLE_NONE){
-                if (move == EXIT_TO_MAIN_MENU){
+            if(graph_toggle_state == EXIT_TO_MAIN_MENU_FROM_GRAPH){
+                if (move == EXIT_TO_MAIN_MENU_FROM_GRAPH){
                     state=move;
                     draw_fill (0);
                     move=0;
@@ -318,6 +340,11 @@ void on_button_clicked(){
                 draw_graph_menu_clear_selection();
 
                 switch(move){
+//					case EXIT_TO_MAIN_MENU_FROM_GRAPH:
+//						state=move;
+//						draw_fill (0);
+//						move=0;
+//						break;
                     case GRAPH_TOGGLE_UPPER_BOUND:
                         draw_graph_menu_upper_bound_selected();
                         break;
@@ -336,13 +363,41 @@ void on_button_clicked(){
                 graph_toggle_state = move;
             }
             else{
-                graph_toggle_state = GRAPH_TOGGLE_NONE;
+                graph_toggle_state = EXIT_TO_MAIN_MENU_FROM_GRAPH;
                 draw_graph_menu_upper_bound_deselect();
                 draw_graph_menu_lower_bound_deselect();
                 draw_graph_menu_upper_bound_button();
                 draw_graph_menu_lower_bound_button();
             }
-            break;
+        	case TEST_MAX_PARAMS:
+        		switch (move){
+					case EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS:
+						state=MAIN_MENU;
+						draw_fill (0);
+						move=4;
+						break;
+				}
+
+                    case TEST_RESISTANCE:
+						switch (move){
+							case EXIT_TO_MAIN_MENU_FROM_RESISTANCE:
+								state=MAIN_MENU;
+								draw_fill (0);
+								move=4;
+								break;
+						}
+								break;
+                    case TEST_CAPACITY:
+						switch (move){
+								case EXIT_TO_MAIN_MENU_FROM_CAPACITY:
+									state=MAIN_MENU;
+									draw_fill (0);
+									move=4;
+									break;
+							}
+                    	break;
+                    default:
+                    	break;
     }
 }
 
@@ -399,11 +454,26 @@ void loop(){
     switch(state){
 
         case MAIN_MENU:
-            move = ((TIM3->CNT)>>2)%4;
-            if (!is_drawn) {
-                draw_main_menu();
+            move = ((TIM3->CNT)>>2)%7;
+            if (4<=move&&move<7) {
+				// draw page 2
+            	if (move_prev < 4) {
+                	page = PAGE_2;
+                	is_drawn = 0;
+            	}
+
+			}
+            else {
+            	// draw page 1
+            	if (4<=move_prev&&move_prev<7) {
+                	page = PAGE_1;
+                	is_drawn = 0;
+            	}
             }
-            draw_main_menu_selection(move, move_prev);
+            if (!is_drawn) {
+            	draw_main_menu(page);
+            }
+            draw_main_menu_selection(move, move_prev, page);
             break;
 
         case QC:
@@ -414,10 +484,10 @@ void loop(){
                 is_drawn=1;
             }
           
-		  	if(move_prev != EXIT_TO_MAIN_MENU){
+		  	if(move_prev != EXIT_TO_MAIN_MENU_FROM_QC){
 				draw_qc_menu_deselect(move_prev);
 			}
-			if (move == EXIT_TO_MAIN_MENU){
+			if (move == EXIT_TO_MAIN_MENU_FROM_QC){
 				draw_exit_focus();
 			}
             else{
@@ -436,7 +506,7 @@ void loop(){
             }
             read_circut_parameters();
             draw_power_menu(ina_vol, ina_curr, ina_pwr);
-			if(move == EXIT_TO_MAIN_MENU){
+			if(move == EXIT_TO_MAIN_MENU_FROM_POWER){
 				draw_exit_focus();
 			}
             else{
@@ -445,7 +515,6 @@ void loop(){
             break;
 
         case CURRENT_CONTROL:
-//        	move = ((TIM3->CNT)>>2)%2000;
             electrical_load();
             draw_current_control_menu(amperage_load);
             break;
@@ -457,14 +526,14 @@ void loop(){
             HAL_Delay(50);
             int delta = 0;
             switch (graph_toggle_state){
-                case GRAPH_TOGGLE_NONE:
+                case EXIT_TO_MAIN_MENU_FROM_GRAPH:
 
                     draw_graph_menu_clear_selection();
 
                     draw_graph_menu_exit_button();
 
                     switch(move){
-                        case EXIT_TO_MAIN_MENU:
+                        case EXIT_TO_MAIN_MENU_FROM_GRAPH:
                             draw_graph_menu_exit_focus();
                             break;
                         case GRAPH_TOGGLE_UPPER_BOUND:
@@ -508,9 +577,41 @@ void loop(){
 				case GRAPH_TOGGLE_RESET:
 					break;
             }
-
-            break;
+            case TEST_MAX_PARAMS:
+            	move = ((TIM3->CNT)>>2)%1;
+				if(move == EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS){
+					draw_exit_focus();
+				}
+				else{
+					draw_exit_button();
+				}
+            	            break;
+            	break;
+            case TEST_RESISTANCE:
+            	move = ((TIM3->CNT)>>2)%1;
+				if(move == EXIT_TO_MAIN_MENU_FROM_RESISTANCE){
+					draw_exit_focus();
+				}
+				else{
+					draw_exit_button();
+				}
+            	            break;
+            	break;
+            	break;
+            case TEST_CAPACITY:
+            	move = ((TIM3->CNT)>>2)%1;
+				if(move == EXIT_TO_MAIN_MENU_FROM_CAPACITY){
+					draw_exit_focus();
+				}
+				else{
+					draw_exit_button();
+				}
+            	            break;
+            	break;
+            default:
+            	break;
     }
+
 
     draw_update_screen();
 }
