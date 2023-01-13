@@ -71,7 +71,7 @@ static void MX_TIM2_Init(void);
 #define GRAPHS_N 3
 #define MILLIVOLTAGE_LOWEST_BOUND 2000
 #define MILLIVOLTAGE_HIGHEST_BOUND 25000
-#define COOLING_POINT 1 0000
+#define COOLING_POINT 10000
 #define COOLING_OFFSET 4000
 
 typedef enum state_t {
