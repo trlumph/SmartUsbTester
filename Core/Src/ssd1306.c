@@ -258,6 +258,10 @@ void SSD1306_Fill(SSD1306_COLOR_t color) {
 }
 
 void SSD1306_DrawPixel(uint16_t x, uint16_t y, SSD1306_COLOR_t color) {
+	// Upside-down rotation
+	y = SSD1306_HEIGHT - y - 1;
+	x = SSD1306_WIDTH - x - 1;
+	
 	if (
 		x >= SSD1306_WIDTH ||
 		y >= SSD1306_HEIGHT

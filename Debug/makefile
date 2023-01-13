@@ -34,34 +34,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := SmartUsbTester
+BUILD_ARTIFACT_NAME := BlackPillRemastered
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-SmartUsbTester.elf \
+BlackPillRemastered.elf \
 
 MAP_FILES += \
-SmartUsbTester.map \
+BlackPillRemastered.map \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-SmartUsbTester.list \
+BlackPillRemastered.list \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: SmartUsbTester.elf secondary-outputs
+main-build: BlackPillRemastered.elf secondary-outputs
 
 # Tool invocations
-SmartUsbTester.elf SmartUsbTester.map: $(OBJS) $(USER_OBJS) D:\ST\STM32CubeIDE_1.10.1\workspace\SmartUsbTester\STM32F401CCUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "SmartUsbTester.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\ST\STM32CubeIDE_1.10.1\workspace\SmartUsbTester\STM32F401CCUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="SmartUsbTester.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+BlackPillRemastered.elf BlackPillRemastered.map: $(OBJS) $(USER_OBJS) /Users/tymur/STM32CubeIDE/workspace_1.10.1/BlackPillRemastered/STM32F401CCUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "BlackPillRemastered.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/Users/tymur/STM32CubeIDE/workspace_1.10.1/BlackPillRemastered/STM32F401CCUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="BlackPillRemastered.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -70,14 +70,14 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-SmartUsbTester.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "SmartUsbTester.list"
+BlackPillRemastered.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "BlackPillRemastered.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) SmartUsbTester.elf SmartUsbTester.list SmartUsbTester.map default.size.stdout
+	-$(RM) BlackPillRemastered.elf BlackPillRemastered.list BlackPillRemastered.map default.size.stdout
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
