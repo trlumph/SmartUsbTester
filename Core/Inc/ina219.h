@@ -187,7 +187,7 @@ enum {
  @brief  Class that stores state and functions for interacting with INA219 current/power monitor IC
  */
 /**************************************************************************/
-void setCalibration_32V_2A_custom(void);
+void setCalibration_32V_custom(void);
 void setCalibration_32V_2A(void);
 void setCalibration_32V_1A(void);
 void setCalibration_16V_400mA(void);

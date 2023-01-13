@@ -150,7 +150,7 @@ void draw_power_menu(uint32_t voltage, uint32_t amperage, uint32_t power){
     SSD1306_Puts(str3, &Font_7x10, 1);
 }
 
-void draw_current_control_menu(int amperage_load){
+void draw_current_control_menu(int amperage_load, int amperage){
 	SSD1306_GotoXY (6,0);
 	SSD1306_Puts("Current Control", &Font_7x10, 1);
 
@@ -158,6 +158,11 @@ void draw_current_control_menu(int amperage_load){
 	snprintf(buf, 8, "%d    ", amperage_load);
 	SSD1306_GotoXY (6, MENU_OFFSET+1);
 	SSD1306_Puts (buf, &Font_7x10, 1);
+
+	char str[14];
+    sprintf(str, "%lu mA     ", amperage);
+    SSD1306_GotoXY(6, MENU_OFFSET+1+2*STEP);
+    SSD1306_Puts(str, &Font_7x10, 1);
 }
 
 void graph_builder(int value, int lower_bound, int upper_bound){

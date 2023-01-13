@@ -67,10 +67,12 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#define MAX_ALLOWED_LOAD 2000
+#define MAX_ALLOWED_LOAD 3200
 #define GRAPHS_N 3
-#define MILLIVOLTAGE_LOWEST_BOUND 1250
-#define MILLIVOLTAGE_HIGHEST_BOUND 8000
+#define MILLIVOLTAGE_LOWEST_BOUND 2000
+#define MILLIVOLTAGE_HIGHEST_BOUND 25000
+#define COOLING_POINT 1 0000
+#define COOLING_OFFSET 4000
 
 typedef enum state_t {
     MAIN_MENU,
@@ -136,11 +138,13 @@ uint32_t ina_pwr = 0;
 uint8_t ina_cnt = 0;
 uint8_t channel=0;
 
+uint8_t cooling = 0;
+
 uint32_t tim3_prev_cnt=0;
 int amperage_load=0;
 int active_load=0;
 
-int graph_upper_bound=7500;
+int graph_upper_bound=3200;
 int graph_lower_bound=0;
 page_t page = PAGE_1;
 
@@ -185,12 +189,43 @@ int get_encoder_rotation(){
     return diff;
 }
 
+// PID controller parameters
+double kp = 0.05; // 0.05
+double ki = 0.5; // 0.5
+double kd = 0.1; // 0.1
+
+// PID controller state
+double integral = 0;
+double previous_error = 0;
+
+int pid_controller(uint32_t actual_voltage, uint32_t desired_voltage) {
+    // Calculate error
+    double error = desired_voltage + 0.0 - actual_voltage;
+    // Update integral
+    integral += error;
+    // Calculate derivative
+    double derivative = error - previous_error;
+    // Save error for next iteration
+    previous_error = error;
+    // Calculate output
+    double output = kp*error + ki*integral + kd*derivative;
+    // Saturate output
+    if (output < 0) {
+        output = 0;
+    } else if (output >= MAX_ALLOWED_LOAD) {
+        output = MAX_ALLOWED_LOAD - 1;
+    }
+    // Convert output to uint32_t and return
+    return output;
+}
+
+
 void electrical_load(){
 
     int diff = get_encoder_rotation();
 
 
-    diff = diff * 25;
+    diff = diff * 100;
 
     if (!active_load){
         amperage_load = 0;
@@ -209,7 +244,7 @@ void electrical_load(){
 
     amperage_load += diff;
     qc_t qc_state = GetStateQC();
-    if (qc_state != QC_OFF && qc_state != QC_5V && qc_state != QC_9V){
+    if (qc_state == QC_MANUAL_UNDEFINED){
         amperage_load = 0;
     }
 
@@ -224,7 +259,9 @@ void electrical_load(){
     // !!!!!!! ATTENTION !!!!!!!!
     // find values for QC, using these values will cause damage to the device
     // !!!!!!! ATTENTION !!!!!!!!
-    TIM2->CCR1 = amperage_load;
+    int adjustment = pid_controller(ina_curr, amperage_load);
+    TIM2->CCR1 = adjustment;
+    HAL_Delay(3);
 }
 
 void read_circut_parameters(){
@@ -233,9 +270,6 @@ void read_circut_parameters(){
     ina_vol = getBusVoltage_V() * 1000;
     ina_vol_float = getBusVoltage_V();
     ina_pwr = getPower_mW();
-
-    ina_curr /= 2; // FIXME: calibrate ina219 correctly
-    ina_pwr /= 2;
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -420,14 +454,12 @@ void setup(){
     HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
     draw_init();
 	Init_5V();
-  	HAL_Delay(3);
     HAL_Delay(500);
     draw_clear();
     adrs_219 = 0x40;
-    setCalibration_32V_2A_custom();
+    setCalibration_32V_custom();
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 	TIM2->CCR1 = 0;
-	HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_SET);
 }
 
 void board_protection(){
@@ -441,16 +473,25 @@ void board_protection(){
     }
     else {
         if(!device_available){
-            Init_5V();
+            HAL_Delay(5000);
+            Init_5V();  
         }
         device_available = 1;
+    }
+
+    if(!cooling && ina_pwr >= COOLING_POINT){
+        HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_SET);
+        cooling = 1;
+    } else if (cooling && ina_pwr < COOLING_POINT - COOLING_OFFSET){
+        HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_RESET);
+        cooling = 0;
     }
 }
 
 void loop(){
     move_prev = move;
 
-    //board_protection();
+    board_protection();
 
     switch(state){
 
@@ -505,7 +546,7 @@ void loop(){
             }else{
                 HAL_Delay(500);
             }
-            read_circut_parameters();
+            //read_circut_parameters();
             draw_power_menu(ina_vol, ina_curr, ina_pwr);
 			if(move == EXIT_TO_MAIN_MENU_FROM_POWER){
 				draw_exit_focus();
@@ -517,12 +558,14 @@ void loop(){
 
         case CURRENT_CONTROL:
             electrical_load();
-            draw_current_control_menu(amperage_load);
+            curr_graph = 1;
+            draw_current_control_menu(amperage_load, ina_curr);
+            draw_graph_builder_menu(graph_lower_bound, graph_upper_bound, graphs, curr_graph);
             break;
 
         case GRAPHS:
             move = ((TIM3->CNT)>>2)%5;
-            read_circut_parameters();
+            //read_circut_parameters();
             draw_graph_builder_menu(graph_lower_bound, graph_upper_bound, graphs, curr_graph);
             HAL_Delay(50);
             int delta = 0;
@@ -586,7 +629,7 @@ void loop(){
 				else{
 					draw_exit_button();
 				}
-            	            break;
+            	    
             	break;
             case TEST_RESISTANCE:
             	move = ((TIM3->CNT)>>2)%1;
@@ -596,7 +639,7 @@ void loop(){
 				else{
 					draw_exit_button();
 				}
-            	            break;
+            	     
             	break;
             	break;
             case TEST_CAPACITY:
