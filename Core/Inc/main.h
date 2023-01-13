@@ -74,6 +74,8 @@ void Error_Handler(void);
 #define DM_H_GPIO_Port GPIOB
 #define DM_L_Pin GPIO_PIN_15
 #define DM_L_GPIO_Port GPIOB
+#define COOLER_Pin GPIO_PIN_9
+#define COOLER_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
