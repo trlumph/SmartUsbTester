@@ -149,7 +149,7 @@ void reset_graph_bounds(){
 }
 
 int get_encoder_rotation(){
-    unsigned int tim3_cnt = TIM3->CNT;
+    unsigned int tim3_cnt = TIM3->CNT>>2;
     int diff;
     if (tim3_cnt > tim3_prev_cnt)
         diff = 1;
@@ -160,12 +160,14 @@ int get_encoder_rotation(){
     tim3_prev_cnt = tim3_cnt;
     return diff;
 }
+int current_control_move_handler() {
 
+}
 void electrical_load(){
 
     int diff = get_encoder_rotation();
 
-//    diff <<= 8;
+
     diff = diff * 25;
 
     if (!active_load){
@@ -443,6 +445,7 @@ void loop(){
             break;
 
         case CURRENT_CONTROL:
+//        	move = ((TIM3->CNT)>>2)%2000;
             electrical_load();
             draw_current_control_menu(amperage_load);
             break;
