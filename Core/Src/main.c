@@ -73,6 +73,7 @@ static void MX_TIM2_Init(void);
 #define MILLIVOLTAGE_HIGHEST_BOUND 25000
 #define COOLING_POINT 5000
 #define COOLING_OFFSET 4000
+#define MAX_UINT32 65532
 
 typedef enum state_t {
     MAIN_MENU,
@@ -118,13 +119,16 @@ typedef enum capacity_control_t{
 	EXIT_TO_MAIN_MENU_FROM_CAPACITY
 } capacity_control_t;
 
+typedef struct OverFlow {
+	int overflow_size;
+} OverFlow;
 
 
 
 volatile int btn_state = 1;
 volatile int can_be_pressed = 1;
-volatile uint16_t move = 0;
-volatile uint16_t move_prev = 0;
+volatile uint32_t move = 0;
+volatile uint32_t move_prev = 0;
 volatile state_t state = MAIN_MENU;
 volatile graph_toggle_t graph_toggle_state = EXIT_TO_MAIN_MENU_FROM_GRAPH;
 volatile int is_drawn = 0;
@@ -188,7 +192,22 @@ int get_encoder_rotation(){
     tim3_prev_cnt = tim3_cnt;
     return diff;
 }
+// Overflow methods
+//move = (TIM3->CNT>>2)%1;
+uint32_t getMove(uint32_t scale) {
+	uint32_t count = ((TIM3->CNT));
+	uint32_t move;
+	if (count == MAX_UINT32) {
+		(TIM3->CNT) = scale<<8;
+		move = scale-1;
+	}
+	else {
 
+		move = (count>>2)%scale;
+	}
+	return move;
+
+}
 // PID controller parameters
 double kp = 0.05; // 0.05
 double ki = 0.5; // 0.5
@@ -223,6 +242,7 @@ int pid_controller(uint32_t actual_voltage, uint32_t desired_voltage) {
 void electrical_load(){
 
     int diff = get_encoder_rotation();
+
 
 
     diff = diff * 100;
@@ -301,7 +321,7 @@ void on_button_clicked(){
                 case EXIT_TO_MAIN_MENU_FROM_QC:
                     state=MAIN_MENU;
                     draw_clear();
-                    move=0;
+                    move=QC-1;
                     break;
 
                 case SET_5V:
@@ -500,7 +520,7 @@ void loop(){
     switch(state){
 
         case MAIN_MENU:
-            move = ((TIM3->CNT)>>2)%7;
+            move = getMove(7);
             if (4<=move&&move<7) {
 				// draw page 2
             	if (move_prev < 4) {
@@ -523,7 +543,7 @@ void loop(){
             break;
 
         case QC:
-            move = ((TIM3->CNT)>>2)%6;
+            move = getMove(6);
 
             if (!is_drawn) {
                 draw_qc_menu();
@@ -544,7 +564,7 @@ void loop(){
             break;
 
         case POWER:
-            move = ((TIM3->CNT)>>2)%1;
+            move = getMove(1);
             if (!is_drawn) {
                 is_drawn=1;
             }else{
@@ -568,7 +588,7 @@ void loop(){
             break;
 
         case GRAPHS:
-            move = ((TIM3->CNT)>>2)%5;
+        	move = getMove(5);
             //read_circut_parameters();
             draw_graph_builder_menu(graph_lower_bound, graph_upper_bound, graphs, curr_graph);
             HAL_Delay(50);
@@ -627,7 +647,7 @@ void loop(){
             }
             break;
             case TEST_MAX_PARAMS:
-            	move = ((TIM3->CNT)>>2)%1;
+            	move = getMove(1);
 				if(move == EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS){
 					draw_exit_focus();
 				}
@@ -647,7 +667,7 @@ void loop(){
 
             	break;
             case TEST_CAPACITY:
-            	move = ((TIM3->CNT)>>2)%1;
+            	move = getMove(1);
 				if(move == EXIT_TO_MAIN_MENU_FROM_CAPACITY){
 					draw_exit_focus();
 				}
