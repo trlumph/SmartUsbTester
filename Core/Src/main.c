@@ -164,7 +164,7 @@ static const graph_t milliWattage= {
         &ina_pwr,
         "mW",
         0,
-        60000
+        36000
 };
 
 const graph_t graphs[GRAPHS_N] = {milliVoltage, milliAmperage, milliWattage};
@@ -402,13 +402,17 @@ void on_button_clicked(){
                 draw_graph_menu_lower_bound_deselect();
                 draw_graph_menu_upper_bound_button();
                 draw_graph_menu_lower_bound_button();
+                break;
             }
+            break;
         	case TEST_MAX_PARAMS:
         		switch (move){
 					case EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS:
 						state=MAIN_MENU;
 						draw_fill (0);
 						move=4;
+						break;
+					default:
 						break;
 				}
         		break;
@@ -621,6 +625,7 @@ void loop(){
 				case GRAPH_TOGGLE_RESET:
 					break;
             }
+            break;
             case TEST_MAX_PARAMS:
             	move = ((TIM3->CNT)>>2)%1;
 				if(move == EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS){
@@ -629,7 +634,7 @@ void loop(){
 				else{
 					draw_exit_button();
 				}
-            	    
+
             	break;
             case TEST_RESISTANCE:
             	move = ((TIM3->CNT)>>2)%1;
@@ -639,7 +644,7 @@ void loop(){
 				else{
 					draw_exit_button();
 				}
-            	     
+
             	break;
             case TEST_CAPACITY:
             	move = ((TIM3->CNT)>>2)%1;
