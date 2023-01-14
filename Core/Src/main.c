@@ -411,27 +411,27 @@ void on_button_clicked(){
 						move=4;
 						break;
 				}
-
-                    case TEST_RESISTANCE:
-						switch (move){
-							case EXIT_TO_MAIN_MENU_FROM_RESISTANCE:
-								state=MAIN_MENU;
-								draw_fill (0);
-								move=4;
-								break;
-						}
-								break;
-                    case TEST_CAPACITY:
-						switch (move){
-								case EXIT_TO_MAIN_MENU_FROM_CAPACITY:
-									state=MAIN_MENU;
-									draw_fill (0);
-									move=4;
-									break;
-							}
-                    	break;
-                    default:
-                    	break;
+        		break;
+			case TEST_RESISTANCE:
+				switch (move){
+					case EXIT_TO_MAIN_MENU_FROM_RESISTANCE:
+						state=MAIN_MENU;
+						draw_fill (0);
+						move=4;
+						break;
+				}
+				break;
+			case TEST_CAPACITY:
+				switch (move){
+						case EXIT_TO_MAIN_MENU_FROM_CAPACITY:
+							state=MAIN_MENU;
+							draw_fill (0);
+							move=4;
+							break;
+					}
+				break;
+		default:
+			break;
     }
 }
 
@@ -641,7 +641,6 @@ void loop(){
 				}
             	     
             	break;
-            	break;
             case TEST_CAPACITY:
             	move = ((TIM3->CNT)>>2)%1;
 				if(move == EXIT_TO_MAIN_MENU_FROM_CAPACITY){
@@ -650,7 +649,6 @@ void loop(){
 				else{
 					draw_exit_button();
 				}
-            	            break;
             	break;
             default:
             	break;
