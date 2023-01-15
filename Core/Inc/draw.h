@@ -25,6 +25,7 @@ void draw_clear();
 void draw_fill(int color);
 void draw_update_screen();
 void draw_exit_focus();
+void draw_temperature(uint32_t t);
 void draw_exit_button();
 void draw_main_menu(page_t page);
 void draw_main_menu_page_1();

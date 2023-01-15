@@ -27,6 +27,7 @@
 #include "draw.h"
 #include "fonts.h"
 #include "qc.h"
+#include "math.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,6 +45,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
@@ -52,6 +55,15 @@ TIM_HandleTypeDef htim3;
 
 /* USER CODE BEGIN PV */
 extern int adrs_219;
+/* ntc vars */
+uint32_t Ntc_Tmp = 0;
+uint16_t Ntc_R;
+/* R1 resistance */
+#define NTC_UP_R 46600.0f
+/* constants of Steinhart-Hart equation */
+#define A 0.0007537836786f
+#define B 0.0002356034273f
+#define C 0.00000005496876007f
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -61,6 +73,7 @@ static void MX_I2C1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -471,7 +484,29 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
             HAL_TIM_Base_Start_IT(&htim1);
         }
     }
+}
 
+volatile int last = -150;
+void check_temperature(){
+	const int curr = HAL_GetTick();
+	if (curr-last<300){return;}
+	last = curr;
+
+	/* get adc value */
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, 100);
+	uint16_t Ntc_Temp_ADC = 4095.0-HAL_ADC_GetValue(&hadc1);
+	HAL_ADC_Stop(&hadc1);
+
+	/* calculate ntc resistance */
+	Ntc_R = ((NTC_UP_R)/((4095.0/Ntc_Temp_ADC) - 1));
+	/* calculate temperature */
+	float Ntc_Ln = log(Ntc_R);
+	Ntc_Tmp = (1.0/(A + B*Ntc_Ln + C*Ntc_Ln*Ntc_Ln*Ntc_Ln)) - 273.15;
+
+	if (Ntc_Tmp > 40) HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_SET);
+	else HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_RESET);
+	// коли і як виключати прилад?!!!!!!!!!!!!!
 }
 
 void setup(){
@@ -487,6 +522,7 @@ void setup(){
 }
 
 void board_protection(){
+	check_temperature();
     read_circut_parameters();
     if(ina_vol < MILLIVOLTAGE_LOWEST_BOUND){
         device_available = 0;
@@ -514,7 +550,6 @@ void board_protection(){
 
 void loop(){
     move_prev = move;
-
     board_protection();
 
     switch(state){
@@ -716,8 +751,10 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   setup();
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -777,6 +814,58 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**

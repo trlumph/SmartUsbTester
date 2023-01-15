@@ -22,7 +22,6 @@
 uint8_t heights[XN];
 
 
-
 void draw_init(){
 	SSD1306_Init();
 }
@@ -46,6 +45,13 @@ void draw_exit_button(){
 
 void draw_exit_focus(){
 	SSD1306_DrawFilledRectangle(100 ,0, 10, 10 ,1);
+}
+
+void draw_temperature(uint32_t t){
+	SSD1306_GotoXY (6,0);
+	char str[7];
+	sprintf(str, "%d C ", t);
+	SSD1306_Puts(str, &Font_7x10, 1);
 }
 
 void draw_main_menu(page_t page) {
