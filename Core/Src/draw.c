@@ -166,7 +166,7 @@ void draw_current_control_menu(int amperage_load, int amperage){
 	SSD1306_Puts (buf, &Font_7x10, 1);
 
 	char str[14];
-    sprintf(str, "%lu mA     ", amperage);
+    sprintf(str, "%d mA     ", amperage);
     SSD1306_GotoXY(6, MENU_OFFSET+1+2*STEP);
     SSD1306_Puts(str, &Font_7x10, 1);
 }
@@ -288,4 +288,19 @@ void draw_graph_menu_clear_selection(){
 	SSD1306_DrawCircle(XN-1, MENU_OFFSET, 5, 0);
 	SSD1306_DrawCircle(XN-1, HEIGHT-5, 5, 0);
 	SSD1306_DrawCircle(6+3, HEIGHT-9, 7, 0);
+}
+
+void draw_qc_support(qc_support_t type){
+	SSD1306_GotoXY(80, MENU_OFFSET+1+1*STEP);
+	switch(type){
+		case QC2_PLUS:
+			SSD1306_Puts("QC2.0+", &Font_7x10, 1);
+			break;
+		case QC_NOT_SUPPORTED:
+			SSD1306_Puts("NO QC ", &Font_7x10, 1);
+			break;
+		case QC_UNKNOWN:
+			SSD1306_Puts("QC ?  ", &Font_7x10, 1);
+			break;
+	}
 }

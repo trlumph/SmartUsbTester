@@ -9,6 +9,7 @@
 #define INC_DRAW_H_
 
 #include <stdint.h>
+#include "qc.h"
 
 typedef struct {
 	const uint32_t *value;
@@ -57,5 +58,8 @@ void draw_graph_menu_data_focus();
 void draw_graph_menu_exit_deselect();
 void draw_graph_menu_exit_button();
 void draw_graph_menu_exit_focus();
+
+void draw_qc_support(qc_support_t type);
+
 
 #endif /* INC_DRAW_H_ */

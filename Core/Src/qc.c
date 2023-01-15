@@ -54,6 +54,42 @@ void DM_33V(){
 	__qc_state = QC_MANUAL_UNDEFINED;
 }
 
+int ReadPin(uint16_t pin){
+	_setPinToRead(pin);
+	int value = HAL_GPIO_ReadPin(GPIOB, pin);
+	_setPinToWrite(pin);
+	return value;
+}
+
+qc_support_t HasQCSupport(){
+	DM_0V();
+	DP_0V();
+	HAL_Delay(1250);
+
+	DP_33V();
+	int firstShorted = ReadPin(DM_H_Pin);
+	
+	DP_06V();
+
+	HAL_Delay(1250);
+	DP_33V();
+	int thanReleased = !ReadPin(DM_H_Pin);
+
+	HAL_Delay(250);
+	DP_06V();
+	// HAL_Delay(1250);
+	DM_0V();
+	HAL_Delay(1);
+	if(firstShorted && thanReleased){
+		__qc_state = QC_5V;
+		return QC2_PLUS;
+	}
+	__qc_state = QC_MANUAL_UNDEFINED;
+	return QC_NOT_SUPPORTED;
+	//return QC2_PLUS;
+
+}
+
 void Init_5V(){
 	DP_06V();
 	HAL_Delay(1250);

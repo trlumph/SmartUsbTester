@@ -78,6 +78,10 @@ void Error_Handler(void);
 #define COOLER_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
+void _setPinToRead(uint16_t pin);
+
+void _setPinToWrite(uint16_t pin);
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

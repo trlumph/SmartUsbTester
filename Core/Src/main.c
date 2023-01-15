@@ -188,6 +188,9 @@ const graph_t graphs[GRAPHS_N] = {milliVoltage, milliAmperage, milliWattage};
 
 int curr_graph = 0;
 
+qc_support_t has_qc_support = QC_UNKNOWN;
+uint8_t continuous_mode_start = 0;
+
 void reset_graph_bounds(){
     graph_upper_bound = graphs[curr_graph].upper_bound;
     graph_lower_bound = graphs[curr_graph].lower_bound;
@@ -277,21 +280,10 @@ void electrical_load(){
 
     amperage_load += diff;
     qc_t qc_state = GetStateQC();
-    if (qc_state == QC_MANUAL_UNDEFINED){
-        amperage_load = 0;
-    }
+    // if (qc_state == QC_MANUAL_UNDEFINED){
+    //     amperage_load = 0;
+    // }
 
-    // 5v
-    // 500 - 113 mA
-    // 1000 - 220 mA
-    // 2000 - 440 mA
-    // 5000 - 1030 mA
-    // 6000 - 1170 mA
-    // 10000 - 1470 mA
-
-    // !!!!!!! ATTENTION !!!!!!!!
-    // find values for QC, using these values will cause damage to the device
-    // !!!!!!! ATTENTION !!!!!!!!
     int adjustment = pid_controller(ina_curr, amperage_load);
     TIM2->CCR1 = adjustment;
     HAL_Delay(3);
@@ -354,16 +346,7 @@ void on_button_clicked(){
                     break;
 
                 case CONTINUOUS_MODE:
-                    //ContinuousMode();
-                	DM_33V();
-                		HAL_Delay(3);
-                		DP_06V();
-                		HAL_Delay(60);
-                    for(int i = 0; i < 10; ++i){
-                    	draw_clear();
-                        IncVoltage();
-                        HAL_Delay(50);
-                    }
+                    continuous_mode_start = 1;
 					//HAL_Delay(2500);
 //					for(int i = 0; i < 25; ++i){
 //                        DecVoltage();
@@ -512,13 +495,28 @@ void check_temperature(){
 void setup(){
     HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
     draw_init();
-	Init_5V();
+    Init_5V();
     HAL_Delay(500);
     draw_clear();
     adrs_219 = 0x40;
     setCalibration_32V_custom();
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 	TIM2->CCR1 = 0;
+
+
+    // /*Configure GPIO pins to READ : DM_H_Pin DP_H_Pin*/
+    // GPIO_InitStruct.Pin = DM_H_Pin|DP_H_Pin;
+    // GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    // GPIO_InitStruct.Pull = GPIO_NOPULL;
+    // HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    // /*Configure GPIO pins to WRITE : DM_H_Pin DP_H_Pin*/
+    // GPIO_InitStruct.Pin = DM_H_Pin|DP_H_Pin;
+    // GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    // GPIO_InitStruct.Pull = GPIO_NOPULL;
+    // GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    // HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    
 }
 
 void board_protection(){
@@ -526,15 +524,23 @@ void board_protection(){
     read_circut_parameters();
     if(ina_vol < MILLIVOLTAGE_LOWEST_BOUND){
         device_available = 0;
+        has_qc_support = QC_UNKNOWN;
     }
     else if(ina_vol > MILLIVOLTAGE_HIGHEST_BOUND){
-        Set_5V();
-        TIM2->CCR1 = 0;       
+        Set_5V();   
+        TIM2->CCR1 = 0;   
     }
     else {
         if(!device_available){
             HAL_Delay(5000);
             Init_5V();  
+            // HAL_Delay(4000);
+            // //Init_5V();
+            // DP_06V();
+	        // HAL_Delay(1250);
+	        // DM_0V();
+            // has_qc_support = HasQCSupport();
+            // HAL_Delay(3);
         }
         device_available = 1;
     }
@@ -580,6 +586,15 @@ void loop(){
         case QC:
             move = getMove(6);
 
+            if (continuous_mode_start){
+                ContinuousMode();
+
+                for(int i = 0; i < 10; ++i){
+                    IncVoltage();
+                    HAL_Delay(50);
+                }
+                continuous_mode_start = 0;
+            }
             if (!is_drawn) {
                 draw_qc_menu();
                 is_drawn=1;
@@ -595,6 +610,8 @@ void loop(){
 				draw_qc_menu_focus(move);
 				draw_exit_button();
 			}
+
+            draw_qc_support(has_qc_support);
 			
             break;
 
@@ -1097,6 +1114,24 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void _setPinToRead(uint16_t pin){
+	/*Configure GPIO pins to READ*/
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	GPIO_InitStruct.Pin = pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+}
+
+void _setPinToWrite(uint16_t pin){
+	/*Configure GPIO pins to WRITE : DM_H_Pin DP_H_Pin*/
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	GPIO_InitStruct.Pin = pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+}
 
 /* USER CODE END 4 */
 
