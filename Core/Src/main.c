@@ -73,6 +73,7 @@ static void MX_TIM2_Init(void);
 #define MILLIVOLTAGE_HIGHEST_BOUND 25000
 #define COOLING_POINT 5000
 #define COOLING_OFFSET 4000
+#define REFERENCE_CABLE_RESISTANCE 81
 
 typedef enum state_t {
     MAIN_MENU,
@@ -112,7 +113,9 @@ typedef enum max_params_t{
 	EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS
 } max_params_t;
 typedef enum resistance_control_t{
-	EXIT_TO_MAIN_MENU_FROM_RESISTANCE
+	EXIT_TO_MAIN_MENU_FROM_RESISTANCE,
+    SAVE_REFERENCE_RESISTANCE,
+    GET_CABLE_RESISTANCE
 } resistance_control_t;
 typedef enum capacity_control_t{
 	EXIT_TO_MAIN_MENU_FROM_CAPACITY
@@ -283,6 +286,30 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
 }
 
+int resistance_reference = 9999;
+int resistance_cable = 9999;
+
+int get_resistance(){
+    // set voltage to 5 volts
+    Set_5V();
+
+    // set current to about 1000 mA
+    TIM2->CCR1 = 500;
+    HAL_Delay(1000);
+
+    // read current
+    // read_circut_parameters(); // or
+    board_protection();
+
+    int resistance = (ina_curr/ina_vol_float)*10; //(ina_vol_float / (ina_curr / 1000.0))*1000;
+
+    amperage_load = 0;
+    TIM2->CCR1 = 0;
+
+    return resistance;
+}
+
+int click = 0;
 void on_button_clicked(){
     switch (state){
         case MAIN_MENU:
@@ -423,6 +450,13 @@ void on_button_clicked(){
 						draw_fill (0);
 						move=4;
 						break;
+                    case SAVE_REFERENCE_RESISTANCE:
+                    click = 1;
+                        break;
+                    case GET_CABLE_RESISTANCE:
+                        // resistance_cable = get_resistance() - resistance_reference;
+                        click = 2;
+                        break;
 				}
 				break;
 			case TEST_CAPACITY:
@@ -477,6 +511,7 @@ void board_protection(){
     }
     else {
         if(!device_available){
+            TIM2->CCR1 = 0;
             HAL_Delay(5000);
             Init_5V();  
         }
@@ -626,37 +661,64 @@ void loop(){
 					break;
             }
             break;
-            case TEST_MAX_PARAMS:
-            	move = ((TIM3->CNT)>>2)%1;
-				if(move == EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS){
-					draw_exit_focus();
-				}
-				else{
-					draw_exit_button();
-				}
+        case TEST_MAX_PARAMS:
+            move = ((TIM3->CNT)>>2)%1;
+            if(move == EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS){
+                draw_exit_focus();
+            }
+            else{
+                draw_exit_button();
+            }
 
-            	break;
-            case TEST_RESISTANCE:
-            	move = ((TIM3->CNT)>>2)%1;
-				if(move == EXIT_TO_MAIN_MENU_FROM_RESISTANCE){
-					draw_exit_focus();
-				}
-				else{
-					draw_exit_button();
-				}
+            break;
+        case TEST_RESISTANCE:
+            move = ((TIM3->CNT)>>2)%3;
+            draw_exit_button();
+            draw_graph_bounds_deselect();
+            draw_graph_menu_upper_bound_button();
+            draw_graph_menu_lower_bound_button();
 
-            	break;
-            case TEST_CAPACITY:
-            	move = ((TIM3->CNT)>>2)%1;
-				if(move == EXIT_TO_MAIN_MENU_FROM_CAPACITY){
-					draw_exit_focus();
-				}
-				else{
-					draw_exit_button();
-				}
-            	break;
-            default:
-            	break;
+            switch(click){
+                case 0:
+                    break;
+                case 1:
+                    resistance_reference = get_resistance() - REFERENCE_CABLE_RESISTANCE;
+                    click = 0;
+                    break;
+                case 2:
+                    resistance_cable = get_resistance() - resistance_reference;
+                    click = 0;
+                    break;
+            }
+
+            switch(move){
+                case EXIT_TO_MAIN_MENU_FROM_RESISTANCE:
+                    draw_exit_focus();
+                    break;
+                case SAVE_REFERENCE_RESISTANCE:
+                    draw_graph_menu_upper_bound_focus();
+                    break;
+                case GET_CABLE_RESISTANCE:
+                    draw_graph_menu_lower_bound_focus();
+                    break;
+            }
+
+            
+
+            draw_resistance_control_menu(resistance_reference, resistance_cable);
+
+            break;
+        case TEST_CAPACITY:
+            move = ((TIM3->CNT)>>2)%1;
+            if(move == EXIT_TO_MAIN_MENU_FROM_CAPACITY){
+                draw_exit_focus();
+            }
+            else{
+                draw_exit_button();
+            }
+            break;
+        default:
+            break;
     }
 
 
