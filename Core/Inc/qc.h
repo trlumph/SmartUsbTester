@@ -18,12 +18,6 @@ typedef enum qc_t {
 	QC_MANUAL_UNDEFINED
 } qc_t;
 
-typedef enum qc_support_t {
-	QC_NOT_SUPPORTED,
-	QC2_PLUS,
-	QC_UNKNOWN
-} qc_support_t;
-
 qc_t GetStateQC();
 
 void DP_0V();
@@ -56,7 +50,5 @@ void IncVoltage();
 
 void DecVoltage();
 
-qc_support_t HasQCSupport();
-// int HasQCSupport();
 
 #endif /* INC_QC_H_ */
