@@ -171,6 +171,21 @@ void draw_current_control_menu(int amperage_load, int amperage){
     SSD1306_Puts(str, &Font_7x10, 1);
 }
 
+void draw_resistance_control_menu(int resistance_reference, int resistance_cable){
+	SSD1306_GotoXY (6,0);
+	SSD1306_Puts("Cable resist.", &Font_7x10, 1);
+
+	char buf[20];
+	sprintf(buf, "%d mOhm ref.  ", resistance_reference);
+	SSD1306_GotoXY (6, MENU_OFFSET+1);
+	SSD1306_Puts (buf, &Font_7x10, 1);
+
+	char str[20];
+    sprintf(str, "%d mOhm act.  ", resistance_cable);
+    SSD1306_GotoXY(6, MENU_OFFSET+1+2*STEP);
+    SSD1306_Puts(str, &Font_7x10, 1);
+}
+
 void graph_builder(int value, int lower_bound, int upper_bound){
 	//int prev_point = heights[0];
 	for(int i = 1; i < XN; ++i){
@@ -282,11 +297,15 @@ void draw_graph_menu_exit_focus(){
 	SSD1306_DrawFilledRectangle(6, MENU_OFFSET-3, 6, 6 ,1);
 }
 
+void draw_graph_bounds_deselect(){
+	SSD1306_DrawCircle(XN-1, MENU_OFFSET, 5, 0);
+	SSD1306_DrawCircle(XN-1, HEIGHT-5, 5, 0);
+}
+
 void draw_graph_menu_clear_selection(){
 	draw_graph_menu_data_deselect();
 	draw_graph_menu_exit_deselect();
-	SSD1306_DrawCircle(XN-1, MENU_OFFSET, 5, 0);
-	SSD1306_DrawCircle(XN-1, HEIGHT-5, 5, 0);
+	draw_graph_bounds_deselect();
 	SSD1306_DrawCircle(6+3, HEIGHT-9, 7, 0);
 }
 

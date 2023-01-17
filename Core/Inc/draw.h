@@ -54,6 +54,7 @@ void draw_graph_menu_reset_button();
 void draw_graph_menu_reset_focus();
 void draw_graph_menu_data_deselect();
 void draw_graph_menu_data_selected();
+void draw_graph_bounds_deselect();
 void draw_graph_menu_data_focus();
 void draw_graph_menu_exit_deselect();
 void draw_graph_menu_exit_button();
