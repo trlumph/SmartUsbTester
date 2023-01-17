@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include <limits.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "ina219.h"
 #include "draw.h"
 #include "fonts.h"
@@ -86,6 +87,7 @@ static void MX_ADC1_Init(void);
 #define GRAPHS_N 4
 #define MILLIVOLTAGE_LOWEST_BOUND 2000
 #define MILLIVOLTAGE_HIGHEST_BOUND 15000
+#define MILLIVOLTAGE_MINIMUM_ALLOWED 3900
 #define COOLING_ENABLE_MILLIWATT 10000
 #define COOLING_DISABLE_MILLIWATT 5000
 #define COOLING_ENABLE_TEMPERATURE 30
@@ -128,7 +130,8 @@ typedef enum current_control_t{
 	EXIT_TO_MAIN_MENU_FROM_CURRENT_CONTROL
 } current_control_t;
 typedef enum max_params_t{
-	EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS
+	EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS,
+    START_MAX_PARAMS_TEST
 } max_params_t;
 typedef enum resistance_control_t{
 	EXIT_TO_MAIN_MENU_FROM_RESISTANCE,
@@ -167,6 +170,7 @@ uint8_t _cooling = 0;
 uint32_t tim3_prev_cnt=0;
 int amperage_load=0;
 int active_load=0;
+int start_load=0;
 
 int graph_upper_bound=3200;
 int graph_lower_bound=0;
@@ -177,6 +181,8 @@ uint32_t board_temperature = 0;
 qc_support_t has_qc_support = QC_UNKNOWN;
 uint8_t qc_execure_check = 0;
 int continuous_mode = 0;
+
+int start_max_params_test = 0;
 
 static const graph_t milliVoltage={
         &ina_vol,
@@ -213,7 +219,7 @@ void reset_graph_bounds(){
 }
 
 int get_encoder_rotation(){
-    unsigned int tim3_cnt = TIM3->CNT>>2;
+    unsigned int tim3_cnt = (TIM3->CNT)>>2;
     int diff;
     if (tim3_cnt > tim3_prev_cnt)
         diff = 1;
@@ -271,13 +277,7 @@ int pid_controller(uint32_t actual_voltage, uint32_t desired_voltage) {
 }
 
 
-void electrical_load(){
-
-    int diff = get_encoder_rotation();
-
-
-
-    diff = diff * 100;
+void electrical_load(int diff){
 
     if (!active_load){
         amperage_load = 0;
@@ -295,10 +295,6 @@ void electrical_load(){
     }
 
     amperage_load += diff;
-    // qc_t qc_state = GetStateQC();
-    // if (qc_state == QC_MANUAL_UNDEFINED){
-    //     amperage_load = 0;
-    // }
 
     // 5v
     // 500 - 113 mA
@@ -324,6 +320,80 @@ void read_circut_parameters(){
     ina_pwr = getPower_mW();
 }
 
+void emergency_shutdown(){
+    TIM2->CCR1 = 0;
+    amperage_load = 0;
+    active_load = 0;
+    HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_SET);
+    Set_5V();
+}
+
+void start_cooling(){
+    if (!_cooling){
+        HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_SET);
+        _cooling = 1;
+    }
+}
+
+void stop_cooling(){
+    if(_cooling){
+        HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_RESET);
+        _cooling = 0;
+    }
+}
+
+volatile int last = -150;
+void check_temperature(){
+	const int curr = HAL_GetTick();
+	if (curr-last<300){return;}
+	last = curr;
+
+	/* get adc value */
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, 100);
+	uint16_t Ntc_Temp_ADC = 4095.0-HAL_ADC_GetValue(&hadc1);
+	HAL_ADC_Stop(&hadc1);
+
+	/* calculate ntc resistance */
+	Ntc_R = ((NTC_UP_R)/((4095.0/Ntc_Temp_ADC) - 1));
+	/* calculate temperature */
+	float Ntc_Ln = log(Ntc_R);
+	Ntc_Tmp = (1.0/(A + B*Ntc_Ln + C*Ntc_Ln*Ntc_Ln*Ntc_Ln)) - 273.15;
+
+    // draw_temperature(Ntc_Tmp);
+    board_temperature = Ntc_Tmp;
+}
+
+int board_protection(){
+    read_circut_parameters();
+    check_temperature();
+    int protection = 0;
+    if(ina_vol < MILLIVOLTAGE_LOWEST_BOUND){
+        device_available = 0;
+        qc_execure_check = 0;
+        has_qc_support = QC_UNKNOWN;
+    }
+    else if(!device_available){
+        device_available = 1;
+        qc_execure_check = 1;
+	}
+
+    if (board_temperature >= MAX_ALLOWED_TEMPERATURE 
+            || ina_vol > MILLIVOLTAGE_HIGHEST_BOUND) {
+        emergency_shutdown();
+        protection=1;
+    }
+    else if (board_temperature >= COOLING_ENABLE_TEMPERATURE 
+            || ina_pwr >= COOLING_ENABLE_MILLIWATT) {
+        start_cooling();
+	}
+    else if (board_temperature < COOLING_DISABLE_TEMPERATURE 
+            && board_temperature < COOLING_DISABLE_MILLIWATT){
+        stop_cooling();
+    } 
+    return protection;
+}
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -347,7 +417,6 @@ int get_resistance(){
     HAL_Delay(1000);
 
     // read current
-    // read_circut_parameters(); // or
     board_protection();
 
     int resistance = (ina_curr/ina_vol_float)*10; //(ina_vol_float / (ina_curr / 1000.0))*1000;
@@ -364,14 +433,19 @@ void on_button_clicked(){
         case MAIN_MENU:
             state=move+1;
             draw_fill(0);
-            if(move+1 == QC)
-			{
-				TIM2->CCR1 = 0;
-                amperage_load = 0;
-			}
-            if(move+1 == GRAPHS){
-                graph_lower_bound = graphs[curr_graph].lower_bound;
-                graph_upper_bound = graphs[curr_graph].upper_bound;
+            switch(move+1)
+            {
+                case QC:
+                    TIM2->CCR1 = 0;
+                    amperage_load = 0;
+                    break;
+                case GRAPHS:
+                    graph_lower_bound = graphs[curr_graph].lower_bound;
+                    graph_upper_bound = graphs[curr_graph].upper_bound;
+                    break;
+                case CURRENT_CONTROL:
+                    start_load = 1;
+                    break;
             }
             move=0;
             break;
@@ -472,6 +546,9 @@ void on_button_clicked(){
 						draw_fill (0);
 						move=4;
 						break;
+                    case START_MAX_PARAMS_TEST:
+                        start_max_params_test = 1;
+                        break;
 					default:
 						break;
 				}
@@ -520,49 +597,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     }
 }
 
-void emergency_shutdown(){
-    TIM2->CCR1 = 0;
-    amperage_load = 0;
-    HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_SET);
-    Set_5V();
-}
-
-void start_cooling(){
-    if (!_cooling){
-        HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_SET);
-        _cooling = 1;
-    }
-}
-
-void stop_cooling(){
-    if(_cooling){
-        HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_RESET);
-        _cooling = 0;
-    }
-}
-
-volatile int last = -150;
-void check_temperature(){
-	const int curr = HAL_GetTick();
-	if (curr-last<300){return;}
-	last = curr;
-
-	/* get adc value */
-	HAL_ADC_Start(&hadc1);
-	HAL_ADC_PollForConversion(&hadc1, 100);
-	uint16_t Ntc_Temp_ADC = 4095.0-HAL_ADC_GetValue(&hadc1);
-	HAL_ADC_Stop(&hadc1);
-
-	/* calculate ntc resistance */
-	Ntc_R = ((NTC_UP_R)/((4095.0/Ntc_Temp_ADC) - 1));
-	/* calculate temperature */
-	float Ntc_Ln = log(Ntc_R);
-	Ntc_Tmp = (1.0/(A + B*Ntc_Ln + C*Ntc_Ln*Ntc_Ln*Ntc_Ln)) - 273.15;
-
-    // draw_temperature(Ntc_Tmp);
-    board_temperature = Ntc_Tmp;
-}
-
 void setup(){
     HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
     draw_init();
@@ -571,34 +605,6 @@ void setup(){
     setCalibration_32V_custom();
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 	TIM2->CCR1 = 0;
-}
-
-void board_protection(){
-    read_circut_parameters();
-    check_temperature();
-    if(ina_vol < MILLIVOLTAGE_LOWEST_BOUND){
-        device_available = 0;
-        qc_execure_check = 0;
-        has_qc_support = QC_UNKNOWN;
-    }
-    else if(!device_available){
-        device_available = 1;
-        qc_execure_check = 1;
-	}
-
-    if (board_temperature >= MAX_ALLOWED_TEMPERATURE 
-            || ina_vol > MILLIVOLTAGE_HIGHEST_BOUND) {
-        emergency_shutdown();
-    }
-    else if (board_temperature >= COOLING_ENABLE_TEMPERATURE 
-            || ina_pwr >= COOLING_ENABLE_MILLIWATT) {
-        start_cooling();
-	}
-    else if (board_temperature < COOLING_DISABLE_TEMPERATURE 
-            && board_temperature < COOLING_DISABLE_MILLIWATT){
-        stop_cooling();
-    } 
-
 }
 
 void loop(){
@@ -690,13 +696,18 @@ void loop(){
 			}
             break;
 
-        case CURRENT_CONTROL:
-            electrical_load();
+        case CURRENT_CONTROL:{
+            int diff = 50 * get_encoder_rotation();
+            if(!start_load){
+                diff = 0;
+                start_load = 1;
+            }
+            electrical_load(diff);
             curr_graph = 1;
             draw_current_control_menu(amperage_load, ina_curr);
             draw_graph_builder_menu(graph_lower_bound, graph_upper_bound, graphs, curr_graph);
             break;
-
+        }
         case GRAPHS:
         	move = getMove(5);
             draw_graph_builder_menu(graph_lower_bound, graph_upper_bound, graphs, curr_graph);
@@ -762,15 +773,55 @@ void loop(){
             break;
 
         case TEST_MAX_PARAMS:
-            move = ((TIM3->CNT)>>2)%1;
-            if(move == EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS){
-                draw_exit_focus();
+            move = getMove(2);
+            if(!is_drawn){
+                draw_max_params_menu(); 
+                is_drawn=1;  
             }
-            else{
-                draw_exit_button();
+            draw_exit_button();
+            draw_max_params_button();
+
+            switch(move){
+                case EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS:
+                    draw_exit_focus();
+                    break;
+                case START_MAX_PARAMS_TEST:{
+                    draw_max_params_focus();
+                    if(!start_max_params_test) break;
+
+                    draw_max_params_protection_hide();
+                    start_max_params_test = 0;
+                    uint32_t max_params_voltage = 0;
+                    uint32_t max_params_amperage = 0;
+                    int protection = 0;
+                    for(int i = 0; i < MAX_ALLOWED_LOAD/100+1; ++i){
+                        // Increment load with 100 mA
+                        electrical_load(100);
+                        protection = board_protection();
+                        if (protection){
+                            break;
+                        }
+                        max_params_voltage = ina_vol;
+                        max_params_amperage = ina_curr;
+                        // Bound the decresing voltage
+                        if(ina_vol < MILLIVOLTAGE_MINIMUM_ALLOWED){
+                            break;
+                        }
+
+                        HAL_Delay(100);
+                    }
+                    if(protection) draw_max_params_protection();
+                    draw_max_params_results(max_params_voltage, max_params_amperage, MAX_ALLOWED_LOAD);  
+                    // Return to 0 mA
+                    amperage_load = 0;
+                    // Repeat to stabilize
+                    for(int j = 0; j < 10; ++j){
+                        electrical_load(0);
+                        HAL_Delay(100);
+                    }
+                }
+                break;
             }
-
-
             break;
         case TEST_RESISTANCE:
             move = ((TIM3->CNT)>>2)%3;
@@ -810,7 +861,7 @@ void loop(){
 
             break;
         case TEST_CAPACITY:
-            move = ((TIM3->CNT)>>2)%1;
+            move = getMove(1);
             if(move == EXIT_TO_MAIN_MENU_FROM_CAPACITY){
                 draw_exit_focus();
             }

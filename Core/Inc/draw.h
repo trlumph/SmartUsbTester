@@ -67,5 +67,13 @@ void draw_qc_voltage(uint32_t voltage);
 
 void draw_show_check_qc();
 void draw_hide_check_qc();
+void draw_resistance_control_menu(int resistance_reference, int resistance_cable);
+
+void draw_max_params_menu();
+void draw_max_params_button();
+void draw_max_params_focus();
+void draw_max_params_results(uint32_t voltage, uint32_t amperage, uint32_t max_allowed_current);
+void draw_max_params_protection();
+void draw_max_params_protection_hide();
 
 #endif /* INC_DRAW_H_ */

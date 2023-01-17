@@ -50,7 +50,7 @@ void draw_exit_focus(){
 void draw_temperature(uint32_t t){
 	SSD1306_GotoXY (6,0);
 	char str[7];
-	sprintf(str, "%d C ", t);
+	sprintf(str, "%lu C ", t);
 	SSD1306_Puts(str, &Font_7x10, 1);
 }
 
@@ -82,11 +82,11 @@ void draw_main_menu_page_2() {
 	  SSD1306_GotoXY (6,0);
 	  SSD1306_Puts ("MENU", &Font_7x10, 1);
 	  SSD1306_GotoXY (6, MENU_OFFSET+1);
-	  SSD1306_Puts ("CAPACITY", &Font_7x10, 1);
+	  SSD1306_Puts ("MAX PARAMS", &Font_7x10, 1);
 	  SSD1306_GotoXY (6, MENU_OFFSET+1+1*STEP);
 	  SSD1306_Puts ("RESISTANCE", &Font_7x10, 1);
 	  SSD1306_GotoXY (6, MENU_OFFSET+1+2*STEP);
-	  SSD1306_Puts ("MAX PARAMS", &Font_7x10, 1);
+	  SSD1306_Puts ("CAPACITY", &Font_7x10, 1);
 }
 
 void draw_qc_menu(){
@@ -166,7 +166,7 @@ void draw_current_control_menu(int amperage_load, int amperage){
 	SSD1306_Puts (buf, &Font_7x10, 1);
 
 	char str[14];
-    sprintf(str, "%lu mA     ", amperage);
+    sprintf(str, "%lu mA    ", amperage);
     SSD1306_GotoXY(6, MENU_OFFSET+1+2*STEP);
     SSD1306_Puts(str, &Font_7x10, 1);
 }
@@ -350,4 +350,46 @@ void draw_show_check_qc(){
 void draw_hide_check_qc(){
 	SSD1306_GotoXY(80, MENU_OFFSET);
 	SSD1306_Puts("     ", &Font_7x10, 1);
+}
+
+void draw_max_params_menu(){
+	int radius = 3;
+	SSD1306_GotoXY(6,0);
+    SSD1306_Puts("Max Params", &Font_7x10, 1);
+	SSD1306_GotoXY(6+radius+3, MENU_OFFSET-5);
+    SSD1306_Puts("Start", &Font_7x10, 1);
+}
+void draw_max_params_button(){
+	int radius = 3;
+	SSD1306_DrawFilledCircle(6, MENU_OFFSET-2, radius, 0);
+	SSD1306_DrawCircle(6, MENU_OFFSET-2, radius, 1);
+}
+void draw_max_params_focus(){
+	int radius = 3;
+	SSD1306_DrawFilledCircle(6, MENU_OFFSET-2, radius, 1);
+}
+
+void draw_max_params_protection(){
+	SSD1306_GotoXY(6, MENU_OFFSET-5+4*STEP);
+    SSD1306_Puts("PROTECTION ON", &Font_7x10, 1);
+}
+void draw_max_params_protection_hide(){
+	SSD1306_GotoXY(6, MENU_OFFSET-5+4*STEP);
+    SSD1306_Puts("            ", &Font_7x10, 1);
+}
+
+void draw_max_params_results(uint32_t voltage, uint32_t amperage, uint32_t max_allowed_current){
+	int radius = 3;
+	SSD1306_GotoXY(6+radius+3, MENU_OFFSET-5);
+    SSD1306_Puts("Rerun", &Font_7x10, 1);
+	SSD1306_GotoXY(6, MENU_OFFSET-5+1*STEP);
+    SSD1306_Puts("Max current:", &Font_7x10, 1);
+	char str[15];
+    sprintf(str, "%lu/%lu mA   ", amperage, max_allowed_current);
+    SSD1306_GotoXY(6, MENU_OFFSET-5+2*STEP);
+    SSD1306_Puts(str, &Font_7x10, 1);
+    char str2[14];
+    sprintf(str2, "%lu mV     ", voltage);
+    SSD1306_GotoXY(6, MENU_OFFSET-5+3*STEP);
+    SSD1306_Puts(str2, &Font_7x10, 1);
 }
