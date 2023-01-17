@@ -19,12 +19,12 @@ Can test max parameters of a PS \
 stops test when:
 - reached max current output
 - voltage drop below the threshhold (3.9V)
-- the board protection is raised (current above 3.2A)
+- the board protection is raised (current above 3.2A) \
 Can test resistance parameters of a cable \
 - To run the test successfully connect a diffirent from main PS and input socket with a reference cable (with known resistance (for now it is 228 mOhm))
 - take measures using option 1
 - to the same PS connect the cable you want to test
-- take measures using option 2
+- take measures using option 2 \
 Can test capacity of a power source (for powerbanks)
 - connect and wait from 1 hr to 4 hrs
  - output in mW/hr
