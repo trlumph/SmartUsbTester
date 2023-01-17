@@ -56,7 +56,7 @@ void DM_33V(){
 
 void Init_5V(){
 	DP_06V();
-	HAL_Delay(1250);
+	HAL_Delay(1500);
 	DM_0V();
 	HAL_Delay(3);
 	__qc_state = QC_5V;
@@ -64,7 +64,7 @@ void Init_5V(){
 
 void Init_9V(){
 	DP_33V();
-	HAL_Delay(1250);
+	HAL_Delay(1500);
 	DM_06V();
 	HAL_Delay(3);
 	__qc_state = QC_9V;
@@ -133,4 +133,59 @@ void DecVoltage(){
 	DM_33V();
 	HAL_Delay(1);
 	__qc_state = QC_CONTINUOUS;
+}
+
+void _setPinToRead(uint16_t pin){
+	/*Configure GPIO pins to READ*/
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	GPIO_InitStruct.Pin = pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+}
+
+void _setPinToWrite(uint16_t pin){
+	/*Configure GPIO pins to WRITE : DM_H_Pin DP_H_Pin*/
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	GPIO_InitStruct.Pin = pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+}
+
+int ReadPin(uint16_t pin){
+	_setPinToRead(pin);
+	int value = HAL_GPIO_ReadPin(GPIOB, pin);
+	_setPinToWrite(pin);
+	return value;
+}
+
+qc_support_t HasQCSupport(){
+	_setPinToRead(DM_H_Pin|DM_L_Pin|DP_L_Pin|DP_H_Pin);
+	_setPinToWrite(DP_L_Pin|DP_H_Pin);
+
+	HAL_Delay(50);
+
+	DP_33V();
+	HAL_Delay(1);
+	int firstShorted = ReadPin(DM_H_Pin);
+	
+	DP_06V();
+
+	HAL_Delay(1500);
+	DP_33V();
+	HAL_Delay(1);
+	int thanReleased = !ReadPin(DM_H_Pin);
+
+	_setPinToWrite(DM_H_Pin|DM_L_Pin|DP_L_Pin|DP_H_Pin);
+	HAL_Delay(50);
+	DP_06V();
+	DM_0V();
+	HAL_Delay(1);
+	if(firstShorted && thanReleased){
+		__qc_state = QC_5V;
+		return QC2_PLUS;
+	}
+	__qc_state = QC_MANUAL_UNDEFINED;
+	return QC_NOT_SUPPORTED;
 }

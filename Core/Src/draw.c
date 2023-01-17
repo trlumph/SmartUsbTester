@@ -93,15 +93,15 @@ void draw_qc_menu(){
 	SSD1306_GotoXY (6,0);
 	SSD1306_Puts ("Quick Charge", &Font_7x10, 1);
 	SSD1306_GotoXY (6, MENU_OFFSET-3);
-	SSD1306_Puts ("Set 5V  ", &Font_7x10, 1);
+	SSD1306_Puts ("Set 5V", &Font_7x10, 1);
 	SSD1306_GotoXY (6, MENU_OFFSET-3+1*STEP);
-	SSD1306_Puts ("Set 9V  ", &Font_7x10, 1);
+	SSD1306_Puts ("Set 9V", &Font_7x10, 1);
 	SSD1306_GotoXY (6, MENU_OFFSET-3+2*STEP);
-	SSD1306_Puts ("Set 12V ", &Font_7x10, 1);
+	SSD1306_Puts ("Set 12V", &Font_7x10, 1);
 	SSD1306_GotoXY (6, MENU_OFFSET-3+3*STEP);
-	SSD1306_Puts ("Set 20V ", &Font_7x10, 1);
+	SSD1306_Puts ("QC 3.0 UP", &Font_7x10, 1);
 	SSD1306_GotoXY (6, MENU_OFFSET-3+4*STEP);
-    SSD1306_Puts ("QC 3.0  ", &Font_7x10, 1);
+    SSD1306_Puts ("QC 3.0 DOWN", &Font_7x10, 1);
 }
 
 void draw_qc_menu_deselect(uint16_t pos){
@@ -201,7 +201,7 @@ void graph_builder(int value, int lower_bound, int upper_bound){
 
 void draw_graph_builder_menu(int lower_bound, int upper_bound, const graph_t *graphs, int curr_graph){
 
-	SSD1306_GotoXY (6,0);
+	SSD1306_GotoXY (6,1);
 	char str[18];
 	snprintf(str, 18, "%s [%d,%d]        ", graphs[curr_graph].description, lower_bound, upper_bound);
 	SSD1306_Puts(str, &Font_7x10, 1);
@@ -288,4 +288,47 @@ void draw_graph_menu_clear_selection(){
 	SSD1306_DrawCircle(XN-1, MENU_OFFSET, 5, 0);
 	SSD1306_DrawCircle(XN-1, HEIGHT-5, 5, 0);
 	SSD1306_DrawCircle(6+3, HEIGHT-9, 7, 0);
+}
+
+void draw_actual_value(uint32_t value){
+	SSD1306_GotoXY (0,HEIGHT/2);
+	char str[12];
+	sprintf(str, " %lu  ", value);
+	SSD1306_Puts(str, &Font_7x10, 1);
+}
+
+void draw_clear_actual_value(){
+	SSD1306_GotoXY (0,HEIGHT/2);
+	SSD1306_Puts("          ", &Font_7x10, 1);
+}
+
+void draw_qc_voltage(uint32_t voltage){
+	SSD1306_GotoXY(80, MENU_OFFSET);
+	char str[10];
+	sprintf(str, "%lu    ", voltage);
+	SSD1306_Puts(str, &Font_7x10, 1);
+}
+void draw_qc_support(qc_support_t type){
+	SSD1306_GotoXY(80, MENU_OFFSET+1+1*STEP);
+	switch(type){
+		case QC2_PLUS:
+			SSD1306_Puts("QC2.0+", &Font_7x10, 1);
+			break;
+		case QC_NOT_SUPPORTED:
+			SSD1306_Puts("NO QC ", &Font_7x10, 1);
+			break;
+		case QC_UNKNOWN:
+			SSD1306_Puts("QC ?  ", &Font_7x10, 1);
+			break;
+	}
+}
+
+void draw_show_check_qc(){
+	SSD1306_GotoXY(80, MENU_OFFSET);
+	SSD1306_Puts("WAIT ", &Font_7x10, 1);
+}
+
+void draw_hide_check_qc(){
+	SSD1306_GotoXY(80, MENU_OFFSET);
+	SSD1306_Puts("     ", &Font_7x10, 1);
 }
