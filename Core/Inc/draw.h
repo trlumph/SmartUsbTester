@@ -9,6 +9,7 @@
 #define INC_DRAW_H_
 
 #include <stdint.h>
+#include "qc.h"
 
 typedef struct {
 	const uint32_t *value;
@@ -25,6 +26,7 @@ void draw_clear();
 void draw_fill(int color);
 void draw_update_screen();
 void draw_exit_focus();
+void draw_temperature(uint32_t t);
 void draw_exit_button();
 void draw_main_menu(page_t page);
 void draw_main_menu_page_1();
@@ -57,5 +59,13 @@ void draw_graph_menu_data_focus();
 void draw_graph_menu_exit_deselect();
 void draw_graph_menu_exit_button();
 void draw_graph_menu_exit_focus();
+void draw_actual_value(uint32_t value);
+void draw_clear_actual_value();
+
+void draw_qc_support(qc_support_t type);
+void draw_qc_voltage(uint32_t voltage);
+
+void draw_show_check_qc();
+void draw_hide_check_qc();
 
 #endif /* INC_DRAW_H_ */

@@ -27,6 +27,7 @@
 #include "draw.h"
 #include "fonts.h"
 #include "qc.h"
+#include "math.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,6 +45,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
@@ -52,6 +55,17 @@ TIM_HandleTypeDef htim3;
 
 /* USER CODE BEGIN PV */
 extern int adrs_219;
+/* ntc vars */
+uint32_t Ntc_Tmp = 0;
+uint16_t Ntc_R;
+/* R1 resistance */
+#define NTC_UP_R 46600.0f
+/* constants of Steinhart-Hart equation */
+#define A 0.0007537836786f
+#define B 0.0002356034273f
+#define C 0.00000005496876007f
+
+#define MAX_ALLOWED_TEMPERATURE 60
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -61,6 +75,7 @@ static void MX_I2C1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -68,11 +83,14 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 #define MAX_ALLOWED_LOAD 3200
-#define GRAPHS_N 3
+#define GRAPHS_N 4
 #define MILLIVOLTAGE_LOWEST_BOUND 2000
-#define MILLIVOLTAGE_HIGHEST_BOUND 25000
-#define COOLING_POINT 5000
-#define COOLING_OFFSET 4000
+#define MILLIVOLTAGE_HIGHEST_BOUND 15000
+#define COOLING_ENABLE_MILLIWATT 10000
+#define COOLING_DISABLE_MILLIWATT 5000
+#define COOLING_ENABLE_TEMPERATURE 30
+#define COOLING_DISABLE_TEMPERATURE 24
+#define MAX_UINT32 65532
 #define REFERENCE_CABLE_RESISTANCE 81
 
 typedef enum state_t {
@@ -93,8 +111,8 @@ typedef enum qc_menu_t{
     SET_5V,
     SET_9V,
     SET_12V,
-    SET_20V,
-    CONTINUOUS_MODE
+    CONTINUOUS_MODE_UP,
+    CONTINUOUS_MODE_DOWN
 } qc_menu_t;
 typedef enum graph_toggle_t{
 	EXIT_TO_MAIN_MENU_FROM_GRAPH,
@@ -121,17 +139,20 @@ typedef enum capacity_control_t{
 	EXIT_TO_MAIN_MENU_FROM_CAPACITY
 } capacity_control_t;
 
+typedef struct OverFlow {
+	int overflow_size;
+} OverFlow;
 
 
 
 volatile int btn_state = 1;
 volatile int can_be_pressed = 1;
-volatile uint16_t move = 0;
-volatile uint16_t move_prev = 0;
+volatile uint32_t move = 0;
+volatile uint32_t move_prev = 0;
 volatile state_t state = MAIN_MENU;
 volatile graph_toggle_t graph_toggle_state = EXIT_TO_MAIN_MENU_FROM_GRAPH;
 volatile int is_drawn = 0;
-volatile int device_available = 1;
+volatile int device_available = 0;
 
 
 uint32_t ina_curr = 0;
@@ -141,7 +162,7 @@ uint32_t ina_pwr = 0;
 uint8_t ina_cnt = 0;
 uint8_t channel=0;
 
-uint8_t cooling = 0;
+uint8_t _cooling = 0;
 
 uint32_t tim3_prev_cnt=0;
 int amperage_load=0;
@@ -150,6 +171,12 @@ int active_load=0;
 int graph_upper_bound=3200;
 int graph_lower_bound=0;
 page_t page = PAGE_1;
+
+uint32_t board_temperature = 0;
+
+qc_support_t has_qc_support = QC_UNKNOWN;
+uint8_t qc_execure_check = 0;
+int continuous_mode = 0;
 
 static const graph_t milliVoltage={
         &ina_vol,
@@ -169,8 +196,14 @@ static const graph_t milliWattage= {
         0,
         36000
 };
+static const graph_t temperature={
+        &board_temperature,
+        "TC",
+        20,
+        75
+};
 
-const graph_t graphs[GRAPHS_N] = {milliVoltage, milliAmperage, milliWattage};
+const graph_t graphs[GRAPHS_N] = {milliVoltage, milliAmperage, milliWattage, temperature};
 
 int curr_graph = 0;
 
@@ -191,7 +224,22 @@ int get_encoder_rotation(){
     tim3_prev_cnt = tim3_cnt;
     return diff;
 }
+// Overflow methods
+//move = (TIM3->CNT>>2)%1;
+uint32_t getMove(uint32_t scale) {
+	uint32_t count = ((TIM3->CNT));
+	uint32_t move;
+	if (count == MAX_UINT32) {
+		(TIM3->CNT) = scale<<8;
+		move = scale-1;
+	}
+	else {
 
+		move = (count>>2)%scale;
+	}
+	return move;
+
+}
 // PID controller parameters
 double kp = 0.05; // 0.05
 double ki = 0.5; // 0.5
@@ -228,6 +276,7 @@ void electrical_load(){
     int diff = get_encoder_rotation();
 
 
+
     diff = diff * 100;
 
     if (!active_load){
@@ -246,10 +295,10 @@ void electrical_load(){
     }
 
     amperage_load += diff;
-    qc_t qc_state = GetStateQC();
-    if (qc_state == QC_MANUAL_UNDEFINED){
-        amperage_load = 0;
-    }
+    // qc_t qc_state = GetStateQC();
+    // if (qc_state == QC_MANUAL_UNDEFINED){
+    //     amperage_load = 0;
+    // }
 
     // 5v
     // 500 - 113 mA
@@ -315,11 +364,16 @@ void on_button_clicked(){
         case MAIN_MENU:
             state=move+1;
             draw_fill(0);
-            move=0;
-			if(move == QC)
+            if(move+1 == QC)
 			{
 				TIM2->CCR1 = 0;
+                amperage_load = 0;
 			}
+            if(move+1 == GRAPHS){
+                graph_lower_bound = graphs[curr_graph].lower_bound;
+                graph_upper_bound = graphs[curr_graph].upper_bound;
+            }
+            move=0;
             break;
 
         case QC:
@@ -328,7 +382,7 @@ void on_button_clicked(){
                 case EXIT_TO_MAIN_MENU_FROM_QC:
                     state=MAIN_MENU;
                     draw_clear();
-                    move=0;
+                    move=QC-1;
                     break;
 
                 case SET_5V:
@@ -343,28 +397,13 @@ void on_button_clicked(){
                     Set_12V();
                     break;
 
-                case SET_20V:
-                    Set_20V();
+                case CONTINUOUS_MODE_UP:
+                    continuous_mode = 1;
                     break;
 
-                case CONTINUOUS_MODE:
-                    //ContinuousMode();
-                	DM_33V();
-                		HAL_Delay(3);
-                		DP_06V();
-                		HAL_Delay(60);
-                    for(int i = 0; i < 10; ++i){
-                    	draw_clear();
-                        IncVoltage();
-                        HAL_Delay(50);
-                    }
-					//HAL_Delay(2500);
-//					for(int i = 0; i < 25; ++i){
-//                        DecVoltage();
-//                        HAL_Delay(350);
-//                    }
+                case CONTINUOUS_MODE_DOWN:
+                    continuous_mode = -1;
                     break;
-
             }
             break;
 
@@ -401,11 +440,6 @@ void on_button_clicked(){
                 draw_graph_menu_clear_selection();
 
                 switch(move){
-//					case EXIT_TO_MAIN_MENU_FROM_GRAPH:
-//						state=move;
-//						draw_fill (0);
-//						move=0;
-//						break;
                     case GRAPH_TOGGLE_UPPER_BOUND:
                         draw_graph_menu_upper_bound_selected();
                         break;
@@ -429,7 +463,6 @@ void on_button_clicked(){
                 draw_graph_menu_lower_bound_deselect();
                 draw_graph_menu_upper_bound_button();
                 draw_graph_menu_lower_bound_button();
-                break;
             }
             break;
         	case TEST_MAX_PARAMS:
@@ -485,14 +518,54 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
             HAL_TIM_Base_Start_IT(&htim1);
         }
     }
+}
 
+void emergency_shutdown(){
+    TIM2->CCR1 = 0;
+    amperage_load = 0;
+    HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_SET);
+    Set_5V();
+}
+
+void start_cooling(){
+    if (!_cooling){
+        HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_SET);
+        _cooling = 1;
+    }
+}
+
+void stop_cooling(){
+    if(_cooling){
+        HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_RESET);
+        _cooling = 0;
+    }
+}
+
+volatile int last = -150;
+void check_temperature(){
+	const int curr = HAL_GetTick();
+	if (curr-last<300){return;}
+	last = curr;
+
+	/* get adc value */
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, 100);
+	uint16_t Ntc_Temp_ADC = 4095.0-HAL_ADC_GetValue(&hadc1);
+	HAL_ADC_Stop(&hadc1);
+
+	/* calculate ntc resistance */
+	Ntc_R = ((NTC_UP_R)/((4095.0/Ntc_Temp_ADC) - 1));
+	/* calculate temperature */
+	float Ntc_Ln = log(Ntc_R);
+	Ntc_Tmp = (1.0/(A + B*Ntc_Ln + C*Ntc_Ln*Ntc_Ln*Ntc_Ln)) - 273.15;
+
+    // draw_temperature(Ntc_Tmp);
+    board_temperature = Ntc_Tmp;
 }
 
 void setup(){
     HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
     draw_init();
-	Init_5V();
-    HAL_Delay(500);
     draw_clear();
     adrs_219 = 0x40;
     setCalibration_32V_custom();
@@ -502,40 +575,40 @@ void setup(){
 
 void board_protection(){
     read_circut_parameters();
+    check_temperature();
     if(ina_vol < MILLIVOLTAGE_LOWEST_BOUND){
         device_available = 0;
+        qc_execure_check = 0;
+        has_qc_support = QC_UNKNOWN;
     }
-    else if(ina_vol > MILLIVOLTAGE_HIGHEST_BOUND){
-        Set_5V();
-        TIM2->CCR1 = 0;       
-    }
-    else {
-        if(!device_available){
-            TIM2->CCR1 = 0;
-            HAL_Delay(5000);
-            Init_5V();  
-        }
+    else if(!device_available){
         device_available = 1;
-    }
+        qc_execure_check = 1;
+	}
 
-    if(!cooling && ina_pwr >= COOLING_POINT){
-        HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_SET);
-        cooling = 1;
-    } else if (cooling && ina_pwr < COOLING_POINT - COOLING_OFFSET){
-        HAL_GPIO_WritePin(GPIOB, COOLER_Pin, GPIO_PIN_RESET);
-        cooling = 0;
+    if (board_temperature >= MAX_ALLOWED_TEMPERATURE 
+            || ina_vol > MILLIVOLTAGE_HIGHEST_BOUND) {
+        emergency_shutdown();
     }
+    else if (board_temperature >= COOLING_ENABLE_TEMPERATURE 
+            || ina_pwr >= COOLING_ENABLE_MILLIWATT) {
+        start_cooling();
+	}
+    else if (board_temperature < COOLING_DISABLE_TEMPERATURE 
+            && board_temperature < COOLING_DISABLE_MILLIWATT){
+        stop_cooling();
+    } 
+
 }
 
 void loop(){
     move_prev = move;
-
     board_protection();
 
     switch(state){
 
         case MAIN_MENU:
-            move = ((TIM3->CNT)>>2)%7;
+            move = getMove(7);
             if (4<=move&&move<7) {
 				// draw page 2
             	if (move_prev < 4) {
@@ -558,7 +631,17 @@ void loop(){
             break;
 
         case QC:
-            move = ((TIM3->CNT)>>2)%6;
+            move = getMove(6);
+            if (continuous_mode != 0){
+                ContinuousMode();
+
+                for(int i = 0; i < 5; ++i){
+                    if (continuous_mode == 1) IncVoltage();
+                    else if (continuous_mode == -1) DecVoltage();
+                    HAL_Delay(50);
+                }
+                continuous_mode = 0;
+            }
 
             if (!is_drawn) {
                 draw_qc_menu();
@@ -575,11 +658,23 @@ void loop(){
 				draw_qc_menu_focus(move);
 				draw_exit_button();
 			}
+
+            draw_qc_voltage(ina_vol);
+            draw_qc_support(has_qc_support);
+
+            if (qc_execure_check){
+                draw_show_check_qc();
+                draw_update_screen();
+                HAL_Delay(4000);
+                has_qc_support = HasQCSupport();
+                draw_hide_check_qc();
+                qc_execure_check = 0;
+            }
 			
             break;
 
         case POWER:
-            move = ((TIM3->CNT)>>2)%1;
+            move = getMove(1);
             if (!is_drawn) {
                 is_drawn=1;
             }else{
@@ -603,11 +698,14 @@ void loop(){
             break;
 
         case GRAPHS:
-            move = ((TIM3->CNT)>>2)%5;
-            //read_circut_parameters();
+        	move = getMove(5);
             draw_graph_builder_menu(graph_lower_bound, graph_upper_bound, graphs, curr_graph);
             HAL_Delay(50);
+            if(move_prev == GRAPH_TOGGLE_DATA && move != GRAPH_TOGGLE_DATA){
+                draw_clear_actual_value();
+            }
             int delta = 0;
+            int multiplier = (graphs[curr_graph].upper_bound - graphs[curr_graph].lower_bound) / 50;
             switch (graph_toggle_state){
                 case EXIT_TO_MAIN_MENU_FROM_GRAPH:
 
@@ -629,19 +727,20 @@ void loop(){
                             draw_graph_menu_reset_focus();
                             break;
                         case GRAPH_TOGGLE_DATA:
+                            draw_actual_value(*graphs[curr_graph].value);
                             draw_graph_menu_data_focus();
                             break;
                     }
                     break;
                 case GRAPH_TOGGLE_UPPER_BOUND:
-                    delta = get_encoder_rotation() << 8;
+                    delta = get_encoder_rotation() * multiplier;
                     graph_upper_bound += delta;
                     if (graph_upper_bound <= graph_lower_bound){
                         graph_upper_bound = graph_lower_bound + 1;
                     }
                     break;
                 case GRAPH_TOGGLE_LOWER_BOUND:
-                    delta = get_encoder_rotation() << 8;
+                    delta = get_encoder_rotation() * multiplier;
                     graph_lower_bound += delta;
                     if (graph_upper_bound <= graph_lower_bound){
                         graph_lower_bound = graph_upper_bound - 1;
@@ -661,6 +760,7 @@ void loop(){
 					break;
             }
             break;
+
         case TEST_MAX_PARAMS:
             move = ((TIM3->CNT)>>2)%1;
             if(move == EXIT_TO_MAIN_MENU_FROM_MAX_PARAMS){
@@ -669,6 +769,7 @@ void loop(){
             else{
                 draw_exit_button();
             }
+
 
             break;
         case TEST_RESISTANCE:
@@ -758,8 +859,10 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   setup();
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -819,6 +922,58 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
