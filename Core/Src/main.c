@@ -441,10 +441,10 @@ void on_button_clicked(){
                     amperage_load = 0;
                     break;
                 case GRAPHS:
-                    graph_lower_bound = graphs[curr_graph].lower_bound;
-                    graph_upper_bound = graphs[curr_graph].upper_bound;
+                    reset_graph_bounds();
                     break;
                 case CURRENT_CONTROL:
+                    reset_graph_bounds();
                     start_load = 1;
                     break;
             }
