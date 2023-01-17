@@ -157,9 +157,8 @@ void draw_power_menu(uint32_t voltage, uint32_t amperage, uint32_t power){
 }
 
 void draw_current_control_menu(int amperage_load, int amperage){
-	SSD1306_GotoXY (6,0);
-	SSD1306_Puts("Current Control", &Font_7x10, 1);
-
+	// SSD1306_GotoXY (6,0);
+	// SSD1306_Puts("Current Control", &Font_7x10, 1);
 	char buf[8];
 	snprintf(buf, 8, "%d    ", amperage_load);
 	SSD1306_GotoXY (6, MENU_OFFSET+1);

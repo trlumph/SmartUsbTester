@@ -93,7 +93,7 @@ static void MX_ADC1_Init(void);
 #define COOLING_ENABLE_TEMPERATURE 30
 #define COOLING_DISABLE_TEMPERATURE 24
 #define MAX_UINT32 65532
-#define REFERENCE_CABLE_RESISTANCE 81
+#define REFERENCE_CABLE_RESISTANCE 228//81
 
 typedef enum state_t {
     MAIN_MENU,
@@ -376,6 +376,7 @@ int board_protection(){
     else if(!device_available){
         device_available = 1;
         qc_execure_check = 1;
+        amperage_load = 0;
 	}
 
     if (board_temperature >= MAX_ALLOWED_TEMPERATURE 
