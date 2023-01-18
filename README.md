@@ -1,7 +1,12 @@
 # SmartUsbTester
 ## Intro
-To power the device connect the power source to the main USB-C port located opposite of the cooling unit. When plugged in, you will see the menu on the screen.
-To naviagete the menu rotate the blue encoder next to the screen. To select the option - click. The menu has two pages with seven options total. On the bottom of the device there are two input sockets: Type-C and Micro-USB (inside they are connected to the same pins).  ATTENTION. DO NOT CONNECT INPUT SOCKETS AND THE MAIN SOCKET TO THE SAME POWER SOURCE (PS).
+To power the device connect the power source to the main USB-C port located opposite of the cooling unit.  
+When plugged in, you will see the menu on the screen.  
+To naviagete the menu rotate the blue encoder next to the screen.  
+To select the option - click.  
+The menu has two pages with seven options total.  
+On the bottom of the device there are two input sockets: Type-C and Micro-USB (inside they are connected to the same pins).  
+ATTENTION. DO NOT CONNECT INPUT SOCKETS AND THE MAIN SOCKET TO THE SAME POWER SOURCE (PS).
 ## Capabilities, Features & User guide
 #### QC
 Quickcharge:
@@ -49,6 +54,7 @@ Can test resistance parameters of a cable
 Can test capacity of a power source (for powerbanks)
 - connect and wait from 1 hr to 4 hrs
  - output in mW/hr
+[demo](https://youtu.be/tY9qM2LNSQs)
 
 
 
