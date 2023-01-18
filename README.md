@@ -11,29 +11,29 @@ Quickcharge:
 #### POWER
 Current, voltage and power measurements from input sockets.
 #### CURRENT
-Can control current\
-- uses PID to set load
-can control the current consumtion of the device (in order to know how much the powersource can give) \
+Can control current
+- uses PID to set load \
+can control the current consumtion of the device (in order to know how much the powersource can give)
 #### GRAPHS
-Can draw real time graphs \
+Can draw real time graphs
 - mA
 - mW
 - mV
-- TC - Temperature Celsius
+- TC - Temperature Celsius \
 To see the values at the moment set cursor to the name of the graph.
 User can set the upper/lower displayed values
 #### MAX PARAMS
-Can test max parameters of a PS \
+Can test max parameters of a PS
 stops test when:
 - reached max current output
 - voltage drop below the threshhold (3.9V)
-- the board protection is raised (current above 3.2A) \
+- the board protection is raised (current above 3.2A)
 #### RESISTANCE
-Can test resistance parameters of a cable \
+Can test resistance parameters of a cable
 - To run the test successfully connect a diffirent from main PS and input socket with a reference cable (with known resistance (for now it is 228 mOhm))
 - take measures using option 1
 - to the same PS connect the cable you want to test
-- take measures using option 2 \
+- take measures using option 2
 #### CAPACITY
 Can test capacity of a power source (for powerbanks)
 - connect and wait from 1 hr to 4 hrs
