@@ -36,8 +36,6 @@ void draw_qc_menu_deselect(uint16_t pos);
 void draw_qc_menu_focus(uint16_t pos);
 void draw_main_menu_selection(uint16_t move, uint16_t previous_move, page_t page);
 void draw_power_menu(uint32_t volts, uint32_t amperage, uint32_t power);
-void draw_capacity_menu(uint32_t voltage, uint32_t amperage, uint32_t mah, uint32_t mwh);
-void draw_done_capacity_measuring(uint32_t mAh, uint32_t mWh);
 void draw_current_control_menu(int amperage_load, int amperage);
 void graph_builder(int value, int lower_bound, int upper_bound);
 void draw_graph_builder_menu(int lower_bound, int upper_bound, const graph_t *graphs, int curr_graph);

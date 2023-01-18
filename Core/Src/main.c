@@ -67,8 +67,6 @@ uint16_t Ntc_R;
 #define C 0.00000005496876007f
 
 #define MAX_ALLOWED_TEMPERATURE 60
-
-#define LOW_VOLTAGE 3200
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -166,8 +164,6 @@ float ina_vol_float = 0;
 uint32_t ina_pwr = 0;
 uint8_t ina_cnt = 0;
 uint8_t channel=0;
-float mAh = 0;
-float mWh = 0;
 
 uint8_t _cooling = 0;
 
@@ -432,27 +428,6 @@ int get_resistance(){
     return resistance;
 }
 
-volatile int last_cap_time = -15000;
-uint8_t measure_capacity(){
-	// if 10 sec passed
-	const int curr = HAL_GetTick();
-	if (curr-last_cap_time<10000){return 1;}
-	last_cap_time = curr;
-
-	// Turn on measuring
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
-
-	// If discharged
-	if (ina_vol < LOW_VOLTAGE){
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
-		return 0;
-	}
-	// update capacity
-	mAh += ina_curr/360;
-	mWh += ina_vol*ina_curr/360000;
-	return 1;
-}
-
 int click = 0;
 void on_button_clicked(){
     switch (state){
@@ -636,6 +611,7 @@ void setup(){
 void loop(){
     move_prev = move;
     board_protection();
+
     switch(state){
 
         case MAIN_MENU:
@@ -879,6 +855,7 @@ void loop(){
                     draw_graph_menu_lower_bound_focus();
                     break;
             }
+
             
 
             draw_resistance_control_menu(resistance_reference, resistance_cable);
@@ -886,8 +863,6 @@ void loop(){
             break;
         case TEST_CAPACITY:
             move = getMove(1);
-            if (measure_capacity()) draw_capacity_menu(ina_vol, ina_curr, mAh, mWh);
-            else draw_done_capacity_measuring(mAh, mWh);
             if(move == EXIT_TO_MAIN_MENU_FROM_CAPACITY){
                 draw_exit_focus();
             }
@@ -1147,6 +1122,7 @@ static void MX_TIM2_Init(void)
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM2_Init 1 */
 
@@ -1166,15 +1142,28 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
 
 }
 
@@ -1243,18 +1232,8 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, DP_H_Pin|DP_L_Pin|DM_H_Pin|DM_L_Pin
                           |COOLER_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin : PA0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : KEY_Pin */
   GPIO_InitStruct.Pin = KEY_Pin;

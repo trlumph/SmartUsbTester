@@ -156,46 +156,6 @@ void draw_power_menu(uint32_t voltage, uint32_t amperage, uint32_t power){
     SSD1306_Puts(str3, &Font_7x10, 1);
 }
 
-void draw_capacity_menu(uint32_t voltage, uint32_t amperage, uint32_t mah, uint32_t mwh){
-    SSD1306_GotoXY (6,0);
-    SSD1306_Puts("Capacity", &Font_7x10, 1);
-
-    char str[14];
-    sprintf(str, "%lu mV     ", voltage);
-    SSD1306_GotoXY(6, MENU_OFFSET-3+1*STEP);
-    SSD1306_Puts(str, &Font_7x10, 1);
-
-    char str2[14];
-    sprintf(str2, "%lu mA     ", amperage);
-    SSD1306_GotoXY(6, MENU_OFFSET-3+2*STEP);
-    SSD1306_Puts(str2, &Font_7x10, 1);
-
-    char str3[14];
-    sprintf(str3, "%lu mAh     ", mah);
-    SSD1306_GotoXY(6, MENU_OFFSET-3+3*STEP);
-    SSD1306_Puts(str3, &Font_7x10, 1);
-
-    char str4[14];
-	sprintf(str4, "%lu mWh     ", mwh);
-	SSD1306_GotoXY(6, MENU_OFFSET-3+4*STEP);
-	SSD1306_Puts(str4, &Font_7x10, 1);
-}
-
-void draw_done_capacity_measuring(uint32_t mAh, uint32_t mWh){
-	SSD1306_GotoXY (6,0);
-    SSD1306_Puts("Measuring finished", &Font_7x10, 1);
-
-    char str[14];
-    sprintf(str, "%lu mAh     ", mAh);
-    SSD1306_GotoXY(6, MENU_OFFSET-3+2*STEP);
-    SSD1306_Puts(str, &Font_7x10, 1);
-
-    char str1[14];
-	sprintf(str1, "%lu mWh     ", mWh);
-	SSD1306_GotoXY(6, MENU_OFFSET-3+3*STEP);
-	SSD1306_Puts(str, &Font_7x10, 1);
-}
-
 void draw_current_control_menu(int amperage_load, int amperage){
 	// SSD1306_GotoXY (6,0);
 	// SSD1306_Puts("Current Control", &Font_7x10, 1);
