@@ -53,7 +53,8 @@ Can test resistance parameters of a cable
 #### CAPACITY
 Can test capacity of a power source (for powerbanks)
 - connect and wait from 1 hr to 4 hrs
- - output in mW/hr
+ - output in mW/hr  
+  
 [demo](https://youtu.be/tY9qM2LNSQs)
 
 
