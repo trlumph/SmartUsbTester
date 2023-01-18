@@ -453,14 +453,6 @@ uint8_t measure_capacity(){
 	return 1;
 }
 
-void reset_measure_capacity(){
-	mAh = 0, mWh = 0;
-}
-
-void stop_measure_capacity(){
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
-}
-
 int click = 0;
 void on_button_clicked(){
     switch (state){
@@ -899,8 +891,6 @@ void loop(){
             if(move == EXIT_TO_MAIN_MENU_FROM_CAPACITY){
                 draw_exit_focus();
             }
-//            reset_measure_capacity();
-//            stop_measure_capacity();
             else{
                 draw_exit_button();
             }
