@@ -67,6 +67,8 @@ uint16_t Ntc_R;
 #define C 0.00000005496876007f
 
 #define MAX_ALLOWED_TEMPERATURE 60
+#define LOW_VOLTAGE 3200
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -163,7 +165,10 @@ uint32_t ina_vol = 0;
 float ina_vol_float = 0;
 uint32_t ina_pwr = 0;
 uint8_t ina_cnt = 0;
-uint8_t channel=0;
+uint8_t channel = 0;
+float mAh = 0;
+float mWh = 0;
+uint8_t start_measuring_capacity = 0;
 
 uint8_t _cooling = 0;
 
@@ -274,6 +279,11 @@ int pid_controller(uint32_t actual_voltage, uint32_t desired_voltage) {
     }
     // Convert output to uint32_t and return
     return output;
+}
+
+void measure_capacity(){
+    mAh += ina_curr/3600.0;
+	mWh += ina_vol*ina_curr/3600000.0;
 }
 
 
@@ -446,6 +456,9 @@ void on_button_clicked(){
                 case CURRENT_CONTROL:
                     reset_graph_bounds();
                     start_load = 1;
+                    break;
+                case TEST_CAPACITY:
+                    start_measuring_capacity = 1;
                     break;
             }
             move=0;
@@ -868,6 +881,20 @@ void loop(){
             }
             else{
                 draw_exit_button();
+            }
+
+            if(start_measuring_capacity){
+                TIM2->CCR1 = 500;
+                start_measuring_capacity = 0;
+                HAL_Delay(250);
+            }
+            if (ina_vol > LOW_VOLTAGE){
+                measure_capacity();
+                draw_capacity_menu(ina_vol, ina_curr, mAh, mWh);
+                HAL_Delay(1000);
+            }
+            else{
+                draw_done_capacity_measuring(mAh, mWh);
             }
             break;
         default:
