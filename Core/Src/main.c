@@ -882,9 +882,8 @@ void loop(){
             else{
                 draw_exit_button();
             }
-
+            draw_capacity_header();
             if(start_measuring_capacity){
-                TIM2->CCR1 = 500;
                 start_measuring_capacity = 0;
                 HAL_Delay(250);
             }

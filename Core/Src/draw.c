@@ -394,9 +394,6 @@ void draw_max_params_results(uint32_t voltage, uint32_t amperage, uint32_t max_a
 }
 
 void draw_capacity_menu(uint32_t voltage, uint32_t amperage, uint32_t mah, uint32_t mwh){
-    SSD1306_GotoXY (6,0);
-    SSD1306_Puts("Capacity", &Font_7x10, 1);
-
     char str[14];
     sprintf(str, "%lu mV     ", voltage);
     SSD1306_GotoXY(6, MENU_OFFSET-3+1*STEP);
@@ -434,4 +431,9 @@ void draw_done_capacity_measuring(uint32_t mAh, uint32_t mWh){
 	sprintf(str1, "%lu mWh     ", mWh);
 	SSD1306_GotoXY(6, MENU_OFFSET-3+4*STEP);
 	SSD1306_Puts(str1, &Font_7x10, 1);
+}
+
+void draw_capacity_header(){
+	SSD1306_GotoXY (6,0);
+    SSD1306_Puts("Capacity", &Font_7x10, 1);
 }

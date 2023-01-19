@@ -78,5 +78,6 @@ void draw_max_params_protection_hide();
 
 void draw_capacity_menu(uint32_t voltage, uint32_t amperage, uint32_t mah, uint32_t mwh);
 void draw_done_capacity_measuring(uint32_t mAh, uint32_t mWh);
+void draw_capacity_header();
 
 #endif /* INC_DRAW_H_ */
