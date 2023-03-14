@@ -1,4 +1,5 @@
 # SmartUsbTester
+![Tester](images/tester1.jpg)
 ## Intro
 To power the device connect the power source to the main USB-C port located opposite of the cooling unit.  
 When plugged in, you will see the menu on the screen.  
@@ -57,7 +58,8 @@ Can test capacity of a power source (for powerbanks)
   
 [demo](https://youtu.be/tY9qM2LNSQs)
 
-
+## Scheme
+![Scheme](images/scheme.png)
 
 
 
