@@ -17,6 +17,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Create workspace directory
+      run: mkdir /github/workspace/stm32_workspace
     - name: Build
-      run: |
-        stm32cubeide --launcher.suppressErrors -nosplash -application org.eclipse.cdt.managedbuilder.core.headlessbuild -data workspace -importAll ${GITHUB_WORKSPACE} -cleanBuild all
+      run: stm32cubeide --launcher.suppressErrors -nosplash -application org.eclipse.cdt.managedbuilder.core.headlessbuild -data /github/workspace/stm32_workspace -importAll ${GITHUB_WORKSPACE} -cleanBuild all
