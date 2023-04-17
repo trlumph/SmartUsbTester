@@ -16,6 +16,8 @@ jobs:
       options: --user root
 
     steps:
+    - name: Wait for container to be ready
+      run: sleep 5
     - uses: actions/checkout@v3
     - name: Build
       run: |
