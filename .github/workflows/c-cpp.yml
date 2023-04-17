@@ -1,0 +1,24 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: xanderhendriks/stm32cubeide:7.0
+      options: --user root
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Create workspace directory
+      run: mkdir /stm32_workspace
+
+    - name: Build
+      run: stm32cubeide --launcher.suppressErrors -nosplash -application org.eclipse.cdt.managedbuilder.core.headlessbuild -data /stm32_workspace -importAll ${GITHUB_WORKSPACE} -cleanBuild all
