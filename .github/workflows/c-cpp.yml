@@ -11,9 +11,12 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    container:
+      image: hunterliu123/stm32cubeide:latest
+      options: --user root
+
     steps:
     - uses: actions/checkout@v3
-    - name: Install dependencies
-      run: sudo apt-get install -y gcc-arm-none-eabi
     - name: Build
-      run: make
+      run: |
+        stm32cubeide --launcher.suppressErrors -nosplash -application org.eclipse.cdt.managedbuilder.core.headlessbuild -data workspace -importAll $(pwd) -cleanBuild all
