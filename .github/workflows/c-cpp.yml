@@ -12,13 +12,15 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: xanderhendriks/stm32cubeide:7.0
+      image: krasnianskyi/stm32cubeide:latest
       options: --user root
 
     steps:
-    - name: Wait for container to be ready
-      run: sleep 5
     - uses: actions/checkout@v3
+    - name: Check PATH
+      run: echo $PATH
+    - name: Set PATH
+      run: export PATH="/opt/stm32cubeide_$STM32_CUBE_IDE_VERSION/bin:${PATH}"
     - name: Build
       run: |
         stm32cubeide --launcher.suppressErrors -nosplash -application org.eclipse.cdt.managedbuilder.core.headlessbuild -data workspace -importAll $(pwd) -cleanBuild all
