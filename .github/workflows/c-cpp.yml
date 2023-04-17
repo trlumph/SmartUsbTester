@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: krasnianskyi/stm32cubeide:latest
+      image: xanderhendriks/stm32cubeide:latest
       options: --user root
 
     steps:
