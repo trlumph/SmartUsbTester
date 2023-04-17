@@ -2,7 +2,7 @@
 #include <string.h>
 #include "ina219.h"
 
-#include "stm32F4xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 
 extern I2C_HandleTypeDef hi2c1;
